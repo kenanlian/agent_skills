@@ -1,7 +1,6 @@
 ---
 name: write-plan
-description: Read-only planning mode. Explores the codebase, resolves every design decision, and writes a self-contained execution spec to docs/plan/<slug>-plan.md that a fresh session can implement verbatim.
-disable-model-invocation: true
+description: Read-only planning mode. Explores the codebase, resolves every design decision, and writes a self-contained execution spec to docs/plan/{slug}-plan-YYYYMMDD-HHmmss.md that a fresh session can implement verbatim.
 ---
 
 # Write plan

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Execute Plan"
+  short_description: "Execute a saved plan through verified completion"
+  default_prompt: "Use $execute-plan to implement the saved plan at the provided path step by step."
+
+policy:
+  allow_implicit_invocation: false

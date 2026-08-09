@@ -1,7 +1,6 @@
 ---
 name: init
 description: Generate AGENTS.md for current codebase
-disable-model-invocation: true
 ---
 
 Generate AGENTS.md by launching multiple `Explore` agents in parallel (via `task` tool) scanning different areas (core src, tests, configs/build, scripts/docs), then synthesize findings into a single file.

@@ -1,7 +1,6 @@
 ---
 name: agent-orchestration
 description: Executes an existing implementation plan by splitting it into todos and delegating bounded work to specialized Cursor subagents. Use after a plan already exists, to coordinate parallel and serial subagent delegation through completion.
-disable-model-invocation: "true"
 ---
 # Agent orchestration
 
