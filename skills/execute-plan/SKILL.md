@@ -45,6 +45,20 @@ Prefer parallel delegation to `explorer-agent` for codebase exploration when sub
 - Do not delegate coordination or the responsibility to follow the plan; the main agent owns sequencing, todos, integration, and final verification.
 - If `explorer-agent` or delegation is unavailable, explore directly and keep executing the plan.
 
+## Parallel implementation
+
+Use `task-agent` for implementation delegation. Run multiple `task-agent` subagents concurrently only when the plan contains independent, bounded tasks that can be implemented and locally verified without waiting for one another.
+
+- Identify dependencies before delegating implementation. Run independent tasks concurrently and keep dependent tasks serial.
+- Give each `task-agent` an explicit scope, expected behavior, constraints, allowed files or modules, and focused validation commands.
+- Avoid parallel delegation when tasks have overlapping implementation surfaces, require unsettled shared interfaces, or need cross-task design decisions during implementation.
+- Each `task-agent` owns the implementation, its related unit tests, and focused validation for its assigned task.
+- Require each subagent to report the files changed, the behavior implemented, the unit tests added or updated, and the validation results.
+- Do not delegate plan coordination, cross-task integration, integration tests, or final verification. The main agent owns these responsibilities and remains accountable for overall correctness.
+- Review and verify each subagent's result before relying on it in dependent work or integration.
+- If a `task-agent`'s implementation or unit tests are incomplete or incorrect, resume that same `task-agent` with the failure evidence and required correction. Do not start a new subagent to replace it.
+- After the parallel tasks complete, the main agent integrates their results, resolves cross-task issues, runs integration tests, and performs the plan's final verification.
+
 ## Execution discipline
 
 - Inspect the current working tree before editing and preserve unrelated user changes.
