@@ -1,9 +1,9 @@
 ---
 name: init
-description: Generate AGENTS.md for current codebase
+description: Generate an AGENTS.md repository guide by delegating independent codebase scans to platform-built-in read-only subagents, then synthesizing the evidence into one concise file.
 ---
 
-Generate AGENTS.md by launching multiple `Explore` agents in parallel (via `task` tool) scanning different areas (core src, tests, configs/build, scripts/docs), then synthesize findings into a single file.
+Generate AGENTS.md by following the `delegate-work` skill to launch platform-built-in read-only subagents for independent scans of core source, tests, configuration and build files, and scripts or documentation. Give every subagent a clear goal, non-overlapping scope, and explicit evidence return contract, then synthesize the results into one file.
 
 <structure>
 - **Project Overview**: Brief description of project purpose

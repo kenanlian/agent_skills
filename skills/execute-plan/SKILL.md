@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: Execute an existing implementation plan from its saved plan file, step by step, with todo tracking, codebase exploration, implementation, and verification through completion. Use after write-plan has produced a plan and the user asks Codex to implement, execute, carry out, or continue that plan.
+description: Execute an existing implementation plan from its saved plan file, step by step, with task tracking, codebase exploration, implementation, and verification through completion. Use after write-plan has produced a plan and the user asks a coding agent to implement, execute, carry out, or continue that plan.
 ---
 
 # Execute plan
@@ -36,28 +36,28 @@ If no todo tool is available, maintain the same step order internally and contin
 
 ## Codebase exploration and delegation
 
-Prefer parallel delegation to `explorer-agent` for codebase exploration when subagents are available and the questions are independent.
+For independent codebase exploration, follow the `delegate-work` skill and dispatch the current platform's built-in read-only subagent.
 
 - Split exploration into distinct, bounded questions such as current implementation and call paths, related tests, and repository conventions.
+- Give every subagent the required skill, a clear task and goal, included and excluded scope, relevant inputs, and explicit return requirements.
 - Launch independent exploration tasks concurrently. Keep dependent questions serial.
-- Make explorer tasks read-only and request exact paths, symbols, and evidence.
-- Verify relevant explorer findings against the repository before relying on them for edits.
-- Do not delegate coordination or the responsibility to follow the plan; the main agent owns sequencing, todos, integration, and final verification.
-- If `explorer-agent` or delegation is unavailable, explore directly and keep executing the plan.
+- Request exact paths, symbols, and evidence, then verify relevant findings against the repository before relying on them for edits.
+- Do not delegate coordination or responsibility for following the plan; the main agent owns sequencing, todos, integration, and final verification.
+- If built-in subagent delegation is unavailable, explore directly and keep executing the plan.
 
 ## Parallel implementation
 
-Use `task-agent` for implementation delegation. Run multiple `task-agent` subagents concurrently only when the plan contains independent, bounded tasks that can be implemented and locally verified without waiting for one another.
+For implementation delegation, follow the `delegate-work` skill and dispatch the current platform's built-in write-capable subagent. Run several subagents concurrently only when the plan contains independent, bounded tasks that can be implemented and locally verified without waiting for one another.
 
 - Identify dependencies before delegating implementation. Run independent tasks concurrently and keep dependent tasks serial.
-- Give each `task-agent` an explicit scope, expected behavior, constraints, allowed files or modules, and focused validation commands.
+- Give each subagent the required domain skill, concrete task and goal, repository, included and excluded scope, relevant inputs, constraints, allowed files or modules, focused validation commands, and required return content.
 - Avoid parallel delegation when tasks have overlapping implementation surfaces, require unsettled shared interfaces, or need cross-task design decisions during implementation.
-- Each `task-agent` owns the implementation, its related unit tests, and focused validation for its assigned task.
-- Require each subagent to report the files changed, the behavior implemented, the unit tests added or updated, and the validation results.
+- Each subagent owns the implementation, related unit tests, and focused validation for its assigned task.
+- Require each response to include completion status, files changed, behavior implemented, tests added or updated, validation commands and observed results, and remaining issues.
 - Do not delegate plan coordination, cross-task integration, integration tests, or final verification. The main agent owns these responsibilities and remains accountable for overall correctness.
-- Review and verify each subagent's result before relying on it in dependent work or integration.
-- If a `task-agent`'s implementation or unit tests are incomplete or incorrect, resume that same `task-agent` with the failure evidence and required correction. Do not start a new subagent to replace it.
-- After the parallel tasks complete, the main agent integrates their results, resolves cross-task issues, runs integration tests, and performs the plan's final verification.
+- Review and verify each result before relying on it in dependent work or integration.
+- If implementation or unit tests are incomplete or incorrect, resume the same subagent with failure evidence and the missing return requirements rather than replacing it.
+- After parallel tasks complete, the main agent integrates their results, resolves cross-task issues, runs integration tests, and performs the plan's final verification.
 
 ## Execution discipline
 
