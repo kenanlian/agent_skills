@@ -1,7 +1,7 @@
 interface:
   display_name: "Execute Plan"
-  short_description: "Execute a saved plan through verified completion"
-  default_prompt: "Use $execute-plan to implement the saved plan at the provided path step by step."
+  short_description: "Execute a saved plan through its verified work DAG"
+  default_prompt: "Use $execute-plan to execute the saved plan at the provided path through its work-package DAG, persistent state, verification, and user-selected review gates."
 
 policy:
   allow_implicit_invocation: false
