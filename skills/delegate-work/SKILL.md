@@ -30,7 +30,7 @@ Classify the task by its requested deliverable, then apply the matching host rul
 
 Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
 
-When waiting on a subagent, every `wait_agent` call must set `timeout_ms: 120000` (2 minutes). Do not omit the timeout or use a different value.
+When waiting on a subagent, every `wait_agent` call must set `timeout_ms: 180000` (3 minutes). Do not omit the timeout or use a different value.
 
 | Work type | Model | Reasoning effort |
 | --- | --- | --- |
