@@ -24,7 +24,7 @@ If the assignment needs several unrelated subsystems, changes a shared contract 
 
 ## Select and isolate the built-in subagent
 
-Classify the task by its requested deliverable, then apply the matching host rule. Treat a task whose deliverable is code or file changes as implementation even when it must first inspect the codebase. Keep model names in this routing table rather than embedding them in plans or task DAGs.
+Classify the task by this subagent's requested deliverable, not the parent workflow, then apply the matching host rule. Treat a task whose deliverable is code or file changes as implementation even when it must first inspect the codebase. A read-only evidence scout dispatched during review is exploration, not Review; do not give it the review model. Keep model names in this routing table rather than embedding them in plans or task DAGs.
 
 ### Codex
 
@@ -34,7 +34,7 @@ When waiting on a subagent, every `wait_agent` call must set `timeout_ms: 180000
 
 | Work type | Model | Reasoning effort |
 | --- | --- | --- |
-| Codebase exploration or external-information research | `gpt-5.6-terra` | `high` |
+| Codebase exploration or external-information research | `gpt-5.6-terra` | `medium` |
 | Code implementation, file changes, or test writing | `gpt-5.6-sol` | `medium` |
 | Review, design, planning, analysis, or any other task | `gpt-5.6-sol` | `high` |
 
@@ -45,6 +45,7 @@ Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated sub
 | Work type | Model |
 | --- | --- |
 | Codebase exploration or external-information research | `cursor-grok-4.6-high` |
+| Read-only evidence scout during review | `cursor-grok-4.6-high` |
 | Code implementation, file changes, or test writing | `cursor-grok-4.6-high` |
 | Review | `gpt-5.6-sol-high` |
 | Design | `claude-opus-5-thinking-high` |
