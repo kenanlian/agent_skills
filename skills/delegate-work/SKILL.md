@@ -45,7 +45,6 @@ Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated sub
 | Work type | Model |
 | --- | --- |
 | Codebase exploration or external-information research | `cursor-grok-4.6-high` |
-| Read-only evidence scout during review | `cursor-grok-4.6-high` |
 | Code implementation, file changes, or test writing | `cursor-grok-4.6-high` |
 | Review | `gpt-5.6-sol-high` |
 | Design | `claude-opus-5-thinking-high` |
