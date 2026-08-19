@@ -2,3 +2,6 @@ interface:
   display_name: "Software Decision Brainstorm"
   short_description: "Run iterative, evidence-grounded software deliberation"
   default_prompt: "Use $brainstorm-software-decisions to compare options for this software decision and guide me through iterative multi-role deliberation."
+
+policy:
+  allow_implicit_invocation: false
