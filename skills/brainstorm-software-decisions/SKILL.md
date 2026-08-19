@@ -1,6 +1,7 @@
 ---
 name: brainstorm-software-decisions
 description: Run iterative, evidence-grounded, multi-perspective deliberation for software decisions. Use when the user asks to brainstorm or choose among development directions, feature approaches, architectures, technology stacks, migrations, build-versus-buy options, delivery strategies, or other consequential engineering tradeoffs; synthesize consensus, disagreement, assumptions, risks, and next-round questions without presenting simulated roles as real experts.
+disable-model-invocation: true
 ---
 
 # Brainstorm software decisions
