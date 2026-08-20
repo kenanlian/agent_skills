@@ -26,7 +26,7 @@ Read the complete plan, including its baseline, contracts, DAG, work packages, c
 
 ## Create or resume persistent execution state
 
-Every execution has a durable state file in the plan's `docs/plan/` directory. Derive `<slug>` by removing `.md` and then a final `-plan` from the plan basename. Compute the complete plan file's SHA-256. Name a new state file `docs/plan/<slug>-execution-YYYYMMDD-HHmmss.md` using host-local time.
+Every execution has a durable state file in the plan's `.dev/plan/` directory. Derive `<slug>` by removing `.md` and then a final `-plan` from the plan basename. Compute the complete plan file's SHA-256. Name a new state file `.dev/plan/<slug>-execution-YYYYMMDD-HHmmss.md` using host-local time.
 
 Before creating a file, list matching `<slug>-execution-*.md` files:
 
