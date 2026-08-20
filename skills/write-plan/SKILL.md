@@ -1,6 +1,6 @@
 ---
 name: write-plan
-description: Read-only planning mode. Explore the codebase, settle load-bearing decisions, and write a self-contained, model-independent execution spec with behavioral contracts and a delegable work-package DAG to a stable docs/plan file for a fresh session.
+description: Read-only planning mode. Explore the codebase, settle load-bearing decisions, and write a self-contained, model-independent execution spec with behavioral contracts and a delegable work-package DAG to a stable .dev/plan file for a fresh session.
 ---
 
 # Write plan
@@ -8,7 +8,7 @@ description: Read-only planning mode. Explore the codebase, settle load-bearing 
 <critical>
 Plan-writing mode is active.
 
-- The ONLY file you may create or edit is the plan at `docs/plan/<slug>-plan.md`.
+- The ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
 - Never create, edit, delete, or rename any other working-tree file.
 - Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Read-only shell commands and genuinely non-mutating checks are allowed.
 - Never delete or rename an existing plan file.
@@ -26,10 +26,10 @@ Detail exists to remove decisions, not to add ceremony. Cut narration, generic r
 
 ## Select the plan file
 
-Plans live in `docs/plan/` at the repository root. List that directory before writing.
+Plans live in `.dev/plan/` at the repository root. List that directory before writing.
 
 - If a plan for this task already exists, read and update it incrementally; remove sections invalidated by the new request.
-- Otherwise choose a short lowercase kebab-case slug and create `docs/plan/<slug>-plan.md`.
+- Otherwise choose a short lowercase kebab-case slug and create `.dev/plan/<slug>-plan.md`.
 - Leave plans for other tasks untouched. The stable filename is the execution entry point and persists across revisions.
 
 Use incremental edits and structure the document with `##` and `###` sections. Write grounded findings as they become stable instead of batching the entire document at the end. Keep the plan free of progress checkboxes, execution status, and review banners.
