@@ -1,4 +1,28 @@
-# Direction and role selection
+# Direction and lens selection
+
+## Discover and close the option set
+
+Before asking lenses to compare options, test whether the initial framing omits
+a materially different path. Always consider the current state as a baseline;
+consider defer, a staged path, a bounded experiment, buy, or adapt only when
+they are feasible alternatives rather than quota-filling variants.
+
+Use an option scout when discovering alternatives requires repository search,
+vendor or ecosystem research, or a map of migration boundaries. The scout finds
+and characterizes candidates but does not recommend one. The parent then records:
+
+```markdown
+Option closure:
+- Included: <O IDs and distinct decision paths>
+- Merged: <candidate into O ID and why>
+- Excluded: <candidate, violated constraint, or dominance reason>
+- Baselines considered: <status quo, defer, staged experiment as applicable>
+- Remaining possibility gap: <None or exact uncertainty>
+```
+
+Freeze this set for the independent first wave so every lens evaluates the same
+decision. Reopen it only when evidence reveals a genuinely different option or
+invalidates an exclusion.
 
 ## Build decision-changing directions
 
@@ -26,7 +50,7 @@ Write each retained direction in this form:
 - Why it matters: <decision or condition it can change>
 - Expected output: <comparison, boundary, failure modes, threshold, or evidence>
 - Evidence needed: <verified inputs or None>
-- Primary roles: <one or two owners>
+- Primary lenses: <one or two owners>
 - Priority: <high, medium, or low with a short reason>
 ```
 
@@ -34,7 +58,7 @@ Prioritize by decision impact, uncertainty, and difficulty of reversal. Avoid
 fake numeric precision; qualitative priority is enough. Keep four to seven
 directions unless the decision is exceptionally broad.
 
-## Select roles dynamically
+## Select analysis lenses dynamically
 
 Cover three responsibilities first:
 
@@ -43,11 +67,13 @@ Cover three responsibilities first:
 3. **Risk challenger:** search for failure modes, invalid assumptions, and exit
    conditions.
 
-Add a role only when it owns a distinct criterion, evidence set, or failure
-mode. Prefer three to six roles. Merge overlapping roles and assign each role
-two to four primary directions rather than asking everyone to answer everything.
+Add a lens only when it owns a distinct criterion, evidence set, failure mode,
+or disconfirmation task. Prefer three to six lenses. Merge overlapping lenses
+and assign each two to four primary directions rather than asking everyone to
+answer everything. Define the mission first; use a professional role label only
+as convenient shorthand and do not invite persona performance.
 
-| Role lens | Primary responsibility | Add when | Bias to resist |
+| Lens shorthand | Primary responsibility | Add when | Bias to resist |
 | --- | --- | --- | --- |
 | Product manager | User value, scope, priority, success measures | Product behavior or roadmap changes | Treating more features as more value |
 | User or customer advocate | Real workflows, adoption, switching cost | User impact is material or poorly represented | Inventing user needs without evidence |
@@ -62,27 +88,29 @@ two to four primary directions rather than asking everyone to answer everything.
 | Skeptic | Strongest countercase and pre-mortem | Choice is costly, irreversible, or converging too easily | Contrarianism without a plausible trigger |
 | Evidence reviewer | Claim quality, source coverage, decisive gaps | External facts or uncertain repository claims drive the choice | Demanding evidence that cannot affect the decision |
 
-## Match roles to work
+## Match lenses to work
 
-- Use an evidence scout instead of a role when the deliverable is a factual map,
+- Use an evidence scout instead of a lens when the deliverable is a factual map,
   exhaustive search, version check, metric, or source summary.
-- Use a role deliberator when the deliverable is a judgment against criteria and
+- Use a lens deliberator when the deliverable is a judgment against criteria and
   constraints.
-- Let a role perform a bounded local lookup when it needs one fact to support its
+- Let a lens perform a bounded local lookup when it needs one fact to support its
   own judgment.
 - Promote broad or shared investigation to a top-level evidence scout controlled
   by the parent agent.
-- Do not use role count as confidence. Add evidence or a challenge lens when
-  confidence is weak.
+- Do not use lens count as confidence. Add evidence or a challenge lens when the
+  factual basis or recommendation robustness is weak.
+- Treat same-family model outputs as correlated even when their contexts are
+  isolated. Independence of prompts reduces anchoring but does not create
+  independent expertise or training priors.
 
 ## Adapt scope to risk
 
 | Decision shape | Suggested deliberation |
 | --- | --- |
-| Simple, reversible, low impact | Two or three lenses; no challenge wave |
-| Moderate tradeoff with repository facts | Three or four roles plus shared evidence as needed |
-| Cross-cutting or difficult to reverse | Four to six roles, evidence scouts, and targeted challenge |
+| Bounded but consequential tradeoff | Three lenses plus shared evidence as needed |
+| Cross-cutting or difficult to reverse | Four to six lenses, evidence scouts, and convergence challenge |
 | Security, data, compliance, or major spend | Add the relevant specialist lens and require real evidence or qualified human review |
 
-Do not start a full roster merely because roles are available. The smallest set
+Do not start a full roster merely because lenses are available. The smallest set
 that covers the decision criteria and material failure modes is the right set.

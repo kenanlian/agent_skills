@@ -1,86 +1,107 @@
 ---
 name: brainstorm-software-decisions
-description: Run iterative, evidence-grounded, multi-perspective deliberation for software decisions. Use when the user asks to brainstorm or choose among development directions, feature approaches, architectures, technology stacks, migrations, build-versus-buy options, delivery strategies, or other consequential engineering tradeoffs; synthesize consensus, disagreement, assumptions, risks, and next-round questions without presenting simulated roles as real experts.
+description: Run iterative, evidence-grounded, multi-perspective deliberation for consequential software decisions such as architecture, technology stacks, migrations, build-versus-buy choices, data or security boundaries, and difficult-to-reverse delivery strategies. Use only when the user explicitly invokes it for a major tradeoff; routine and reversible decisions belong in direct discussion. Synthesize evidence, disagreements, assumptions, decision boundaries, risks, and next actions without presenting simulated lenses as real experts.
 disable-model-invocation: true
 ---
 
 # Brainstorm software decisions
 
 Treat the workflow as structured decision assistance, not a virtual expert
-committee. Use roles as distinct review lenses. Never imply that model agreement
-is expert validation or decide by vote.
+committee. Use mission-oriented analysis lenses, not simulated personas. Never
+imply that model agreement is expert validation or decide by vote.
+
+This is a deep workflow for consequential decisions, not a default ideation
+step. Do not dilute it into a lightweight path for routine, local, or readily
+reversible choices. If the requested decision does not justify independent
+evidence work, multiple lenses, or an explicit decision record, explain that
+direct discussion is sufficient and do not run the workflow.
 
 Keep the parent agent as the sole control plane. Own the decision frame, agenda,
-delegation, shared evidence, cross-role synthesis, verification of load-bearing
+delegation, shared evidence, cross-lens synthesis, verification of load-bearing
 claims, and final report. Let subagents perform bounded evidence collection or
-role analysis; do not let them make the global decision.
+lens analysis; do not let them make the global decision.
 
 ## Load the working references
 
 - Read [direction-and-role-selection.md](references/direction-and-role-selection.md)
-  before setting the agenda or selecting roles.
+  before closing options, setting the agenda, or selecting lenses.
 - Read [subagent-contract.md](references/subagent-contract.md) before dispatching
-  evidence scouts, role deliberators, or challenge work.
+  option scouts, evidence scouts, lens deliberators, or challenge work.
 - Read [decision-report.md](references/decision-report.md) before producing or
   updating a round report.
 
 ## Run one deliberation round
 
-### 1. Frame the decision
+### 1. Frame and qualify the decision
 
 Turn the request and any previous round into a compact decision brief:
 
 - the exact decision to make and the desired outcome;
-- users, stakeholders, and success criteria;
-- hard constraints, preferences, time horizon, and reversibility;
+- the decision owner, affected stakeholders, and decision deadline;
+- hard constraints, primary objectives, precedence or tie-breakers, and veto
+  conditions;
+- preferences, time horizon, reversibility, and out-of-scope decisions;
 - known options, including deferring or running an experiment when applicable;
 - confirmed facts, inferred context, assumptions, and unknowns;
 - the scope and desired outcome of this round.
 
 Preserve stable option, assumption, unknown, risk, and decision IDs across
-rounds. State reasonable assumptions instead of blocking on non-critical gaps.
-Ask before dispatch only when a missing preference or authority would materially
-change the agenda or create an unsafe expansion of scope.
+rounds. Separate hard constraints from objectives that can be traded. State
+reasonable assumptions instead of blocking on non-critical gaps.
 
-### 2. Build the agenda and choose roles
+Before expensive delegation, perform a decision-frame checkpoint. Ask the user
+only when an unresolved owner decision, criteria precedence, veto condition, or
+scope boundary could change the leading option or make the investigation
+unauthorized. Otherwise state the adopted frame and proceed.
 
-Follow the selection reference. Express each direction as a decision-changing
-question with an expected output and evidence need. Rank directions by decision
-impact, uncertainty, and difficulty of reversal; normally keep four to seven.
+### 2. Close the option set, build the agenda, and choose lenses
 
-Choose roles from the agenda rather than starting with a fixed roster. Normally
+Follow the selection reference. Before evaluation, test whether the initial
+option set omits a materially different path. Include status quo, defer, staged
+adoption, or a decisive experiment when applicable. Use an independent option
+scout only when repository or market discovery is needed. Then freeze the option
+set for the first lens wave and record why candidates were included, merged, or
+excluded. Reopen it only when new evidence invalidates the closure.
+
+Express each direction as a decision-changing question with an expected output
+and evidence need. Rank directions by decision impact, uncertainty, and
+difficulty of reversal; normally keep four to seven.
+
+Choose analysis lenses from the agenda rather than starting with a fixed roster.
+Define each lens by a distinct criterion, evidence set, failure mode, or
+disconfirmation task; use a professional role name only as shorthand. Normally
 use three to six non-overlapping lenses. Cover outcome value, feasibility, and
-risk, then add only roles justified by the decision. Do not create a
-role-by-direction Cartesian product.
+risk, then add only lenses justified by the decision. Do not create a
+lens-by-direction Cartesian product.
 
 ### 3. Establish shared evidence
 
 Identify claims that require repository inspection, external research, metrics,
-or stakeholder input. When several roles need the same broad facts, dispatch
+or stakeholder input. When several lenses need the same broad facts, dispatch
 bounded read-only evidence scouts first and verify their material outputs before
-the role wave.
+the lens wave.
 
-Allow a role deliberator to inspect code, documentation, or tests when a local
+Allow a lens deliberator to inspect code, documentation, or tests when a local
 fact is necessary for its assigned judgment. Require exact evidence and search
 coverage for repository-grounded claims. If the investigation exceeds its
-scope, require the role to return an evidence gap instead of expanding work.
+scope, require the lens to return an evidence gap instead of expanding work.
 
 Verify directly every load-bearing public interface, data or security boundary,
 negative claim, and disputed fact before relying on it in the recommendation.
 
-### 4. Dispatch independent role deliberation
+### 4. Dispatch independent lens deliberation
 
 Load and follow `delegate-work` for every dispatch. Classify evidence collection
-as exploration or research and role judgment as design, analysis, or review;
+as exploration or research and lens judgment as design, analysis, or review;
 leave model and reasoning routing to that skill.
 
-Give every role the same verified decision brief plus a distinct, bounded role
-charter. Dispatch the first role wave independently so one role cannot anchor on
-another's conclusion. Require each role to expose assumptions, evaluate relevant
+Give every lens the same verified decision brief plus a distinct, bounded
+charter. Dispatch the first lens wave independently so one lens cannot anchor on
+another's conclusion. Require each lens to expose assumptions, evaluate relevant
 options, state the strongest opposing case, and describe what evidence would
 change its position.
 
-Use only platform-built-in subagents. Do not allow role subagents to delegate
+Use only platform-built-in subagents. Do not allow lens subagents to delegate
 further. Promote any necessary broader work to a separate top-level evidence
 scout controlled by the parent. Keep all deliberation read-only; do not
 implement a candidate solution.
@@ -92,7 +113,7 @@ deliberation.
 ### 5. Synthesize and challenge
 
 Normalize factual claims as `confirmed`, `inferred`, or `unverified`, and label
-role judgments as `opinion`. Resolve conflicting facts before comparing
+lens judgments as `opinion`. Resolve conflicting facts before comparing
 judgments.
 
 Separate:
@@ -107,9 +128,23 @@ criteria and constraints. Preserve minority arguments when they expose a
 high-impact failure mode.
 
 For consequential unresolved disagreements, send only the compact disagreement
-packet to the relevant existing roles and ask them to address the strongest
+packet to the relevant existing lenses and ask them to address the strongest
 opposing case. Add a dedicated skeptic or evidence reviewer only when it fills a
-distinct gap. Skip this challenge wave for simple, reversible, low-risk choices.
+distinct gap.
+
+Challenge convergence as well as disagreement. After a leading recommendation
+emerges, run one bounded convergence challenge for a difficult-to-reverse
+decision unless independent real-world validation already attacks its central
+assumptions. Ask for the most plausible failure narrative, earliest warning
+signal, correlated assumption, disconfirming evidence, and whether another
+option fails more gracefully. Context independence among same-family models is
+not expert or model-family independence.
+
+Separate evidence quality, forecast uncertainty, and recommendation robustness;
+do not compress them into one confidence label. Identify the assumption or
+threshold most likely to flip the recommendation. Prefer an experiment over
+another language-only round when a low-cost observation has high decision
+leverage.
 
 ### 6. Report and hand control to the user
 
@@ -117,6 +152,11 @@ Use the report reference to produce a decision-oriented report rather than
 role-by-role meeting notes. Give a conditional recommendation when evidence
 supports one; otherwise state exactly what prevents a decision and the cheapest
 way to resolve it.
+
+Lead with a compact decision summary and keep detailed coverage, evidence, and
+history in a supporting workspace. When the user moves to planning, produce the
+handoff packet defined by the report reference so accepted constraints,
+non-goals, validations, risks, and exit conditions survive the transition.
 
 End with no more than three questions or actions that have the highest chance of
 changing the decision. Wait for user input after the round unless the user
@@ -126,7 +166,7 @@ already available.
 ## Continue or stop
 
 On new user input, record what changed, retain unaffected IDs and evidence, and
-rerun only impacted directions and roles. Do not repeat the complete committee
+rerun only impacted directions and lenses. Do not repeat the complete committee
 by default.
 
 Stop deliberation when any of these applies:
@@ -136,6 +176,7 @@ Stop deliberation when any of these applies:
 - an external experiment, measurement, or stakeholder answer is required;
 - the recommendation is decision-ready with documented conditions and exit
   criteria;
+- remaining unknowns have lower information value than their resolution cost;
 - another round would add no material information; or
 - a real qualified reviewer is required for a high-risk conclusion.
 
