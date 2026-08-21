@@ -1,6 +1,7 @@
 ---
 name: execute-plan
 description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave verification, integration, and user-selected conformance and patch review through completion.
+disable-model-invocation: true
 ---
 
 # Execute plan

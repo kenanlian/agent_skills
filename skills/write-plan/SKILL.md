@@ -1,6 +1,7 @@
 ---
 name: write-plan
 description: Read-only planning mode. Explore the codebase, settle load-bearing decisions, and write a self-contained, model-independent execution spec with behavioral contracts and a delegable work-package DAG to a stable .dev/plan file for a fresh session.
+disable-model-invocation: true
 ---
 
 # Write plan
