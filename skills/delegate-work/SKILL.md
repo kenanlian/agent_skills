@@ -30,13 +30,13 @@ Classify the task by this subagent's requested deliverable, not the parent workf
 
 Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
 
-When waiting on a subagent, every `wait_agent` call must set `timeout_ms: 180000` (3 minutes). Do not omit the timeout or use a different value.
+Every `wait_agent` must set the table's `timeout_ms`; do not omit it or substitute another value. That timeout is a heartbeat, not a kill. If it fires while the subagent is still progressing, wait again with the same value, at most three waits total; then apply the stall policy in Dispatch and collect.
 
-| Work type | Model | Reasoning effort |
-| --- | --- | --- |
-| Codebase exploration or external-information research | `gpt-5.6-terra` | `medium` |
-| Code implementation, file changes, or test writing | `gpt-5.6-sol` | `medium` |
-| Review, design, planning, analysis, or any other task | `gpt-5.6-sol` | `high` |
+| Work type | Model | Reasoning effort | timeout_ms |
+| --- | --- | --- | --- |
+| Codebase exploration or external-information research | `gpt-5.6-terra` | `medium` | `360000` (6 min) |
+| Code implementation, file changes, or test writing | `gpt-5.6-sol` | `medium` | `480000` (8 min) |
+| Review, design, planning, analysis, or any other task | `gpt-5.6-sol` | `high` | `720000` (12 min) |
 
 ### Cursor
 
