@@ -148,8 +148,8 @@ final_verdict: <APPROVE | REVISE | pending>
 
 ## Reviewer provenance
 
-- write-plan skill SHA-256: `<digest of exact loaded skill contents when accessible, otherwise unknown>`
-- review-plan skill SHA-256: `<digest when accessible, otherwise unknown>`
+- write-plan skill version: `<host- or repository-reported revision when accessible, otherwise unknown>`
+- review-plan skill version: `<host- or repository-reported revision when accessible, otherwise unknown>`
 - main-agent model: `<exact host-reported identifier, or unknown>`
 - main-agent reasoning configuration: `<exact host-reported value, or unknown>`
 
@@ -167,11 +167,11 @@ final_verdict: <APPROVE | REVISE | pending>
 - Pending
 ```
 
-Do not infer unavailable provenance. Prefer SHA-256 of the exact loaded skill contents over a manually maintained version label. Record reviewer model or reasoning configuration in the raw review file when the host exposes them; otherwise use `unknown`.
+Do not infer unavailable provenance. Record a host- or repository-reported skill revision only when it is directly available; otherwise use `unknown`. Record reviewer model or reasoning configuration in the raw review file when the host exposes them; otherwise use `unknown`.
 
 For every review invocation, allocate the next integer round. Before dispatching the reviewer:
 
-1. Read the complete current plan and compute its SHA-256.
+1. Read the complete current plan.
 2. Save an exact immutable copy as `round-NN-plan.md`. This snapshot is the authoritative plan revision that the reviewer saw; later plan edits must never modify it.
 3. Record the current repository `HEAD` and task-relevant dirty-state summary.
 4. Dispatch the read-only `review-plan` subagent with the exact live plan path. Do not give it persistence authority.
@@ -182,9 +182,9 @@ When the reviewer returns, immediately save `round-NN-review.md` before editing 
 ---
 review_run_id: <review-run-id>
 round: <N>
-reviewed_plan_sha256: <digest matching round-NN-plan.md>
+reviewed_plan: <round-NN-plan.md>
 repository_head: <sha>
-reviewer_skill_sha256: <digest or unknown>
+reviewer_skill_version: <reported revision or unknown>
 reviewer_model: <exact host-reported identifier or unknown>
 reviewer_reasoning: <exact host-reported value or unknown>
 started: <timestamp>
@@ -198,7 +198,7 @@ confidence: <0.0-1.0 or unknown>
 <reviewer return reproduced verbatim>
 ```
 
-The plan snapshot is a plan-review-specific requirement: unlike a code diff anchored by repository state, the live plan is intentionally rewritten between review rounds. A hash alone is insufficient for later audit because the reviewed text may no longer exist anywhere else.
+The plan snapshot is a plan-review-specific requirement: the live plan is intentionally rewritten between review rounds, so the immutable snapshot is the evidence of what the reviewer actually saw.
 
 After persisting the raw review, independently validate every `PR-*` finding against the plan and repository. Write `round-NN-adjudication.md` before revising the live plan. Include every reported `P0`–`P3` finding so later analysis can distinguish reviewer claims from accepted planning defects:
 
@@ -207,7 +207,7 @@ After persisting the raw review, independently validate every `PR-*` finding aga
 review_run_id: <review-run-id>
 round: <N>
 adjudicated_at: <timestamp>
-reviewed_plan_sha256: <digest>
+reviewed_plan: <round-NN-plan.md>
 ---
 
 # Plan review adjudication
@@ -229,15 +229,14 @@ reviewed_plan_sha256: <digest>
 
 Do not add retrospective root-cause or prevention-layer judgments during planning. Those belong to later audit.
 
-For a `REVISE` round, revise the live plan for confirmed in-scope findings, then update each adjudication entry's resolution and revision evidence. Record the resulting live plan SHA-256 in the round summary after all authorized revisions are complete. For an `APPROVE` round with no findings, still create an adjudication file with zero counts so every review invocation has a complete raw-review/adjudication pair.
+For a `REVISE` round, revise the live plan for confirmed in-scope findings, then update each adjudication entry's resolution and revision evidence. For an `APPROVE` round with no findings, still create an adjudication file with zero counts so every review invocation has a complete snapshot/raw-review/adjudication set.
 
 Update `manifest.md` after every round with a compact entry containing:
 
-- reviewed plan snapshot path and SHA-256;
+- reviewed plan snapshot path;
 - raw review and adjudication paths;
-- verdict and confidence;
-- finding counts by adjudication status; and
-- resulting live plan SHA-256 after any revision.
+- verdict and confidence; and
+- finding counts by adjudication status.
 
 Set `rounds` to the highest completed round. When the review gate closes at `APPROVE`, set `completed`, `final_verdict: APPROVE`, and a final aggregate summary. Keep field names and enums stable so future audit scripts can compare plan-review categories, severities, confirmation rates, rounds-to-approval, reviewer model/skill versions, and which kinds of planning gaps recur.
 
