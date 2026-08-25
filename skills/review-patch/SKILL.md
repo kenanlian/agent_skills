@@ -18,7 +18,7 @@ Review the implementation that changed, not the proposal that preceded it. Do no
 3. Check changed error paths, state transitions, cleanup, authorization boundaries, compatibility behavior, and concurrent or repeated execution when applicable.
 4. Inspect the relevant tests. Determine whether they cover the changed observable contract and would fail for a plausible defect in the patch.
 5. When focused read-only tracing would materially improve coverage, follow the `delegate-work` skill and give each built-in read-only subagent a bounded question, explicit scope, and evidence return contract.
-6. Do not edit files, run builds or tests, or trigger other state-changing commands.
+6. Do not edit files, run builds or tests, persist review artifacts, or trigger other state-changing commands. The caller owns review persistence and adjudication.
 
 ## Finding criteria
 
@@ -31,6 +31,34 @@ Use P0–P3 severity:
 - P2: meaningful edge case or integration defect
 - P3: minor but actionable correctness concern
 
+Assign exactly one category to each finding from this stable taxonomy:
+
+- `logic`
+- `integration`
+- `state-management`
+- `error-handling`
+- `cleanup`
+- `compatibility`
+- `concurrency`
+- `security`
+- `data-schema`
+- `api-contract`
+- `test-gap`
+- `edge-case`
+
+Choose the category that best describes the defect's primary failure mode rather than every affected subsystem.
+
 ## Output
 
-For each finding, provide priority, concise title, trigger, impact, remedy, and an affected file with a patch-overlapping line range. End with an overall verdict (`correct` or `incorrect`), a 1–3 sentence explanation, and confidence from 0.0 to 1.0. If no findings meet the threshold, say so explicitly.
+Give findings stable IDs in report order: `RP-01`, `RP-02`, and so on. For each finding, provide:
+
+- ID
+- priority
+- category
+- concise title
+- trigger
+- impact
+- remedy
+- affected file with a patch-overlapping line range
+
+End with an overall verdict (`correct` or `incorrect`), a 1–3 sentence explanation, and confidence from 0.0 to 1.0. If no findings meet the threshold, say so explicitly. Do not omit IDs or categories when findings exist; callers may persist and aggregate these fields across review runs.
