@@ -22,6 +22,7 @@ Read the complete plan, then restate it as behavioral contracts: observable beha
 - Harvest contracts from the entire document, including context, rationale, assumptions, and contingencies.
 - Treat literal names, signatures, fields, and deletion lists as means unless a contract or user-facing interface depends on them.
 - Record each contract's plan section and ordered dependencies.
+- Preserve an existing contract identifier from the plan when one exists. Otherwise assign a stable report-local identifier in plan order (`PC-01`, `PC-02`, and so on) and reuse it throughout this review run.
 
 ## Procedure
 
@@ -33,7 +34,7 @@ Read the complete plan, then restate it as behavioral contracts: observable beha
 6. Verify plan-mandated tests exist and assert the contract. Do not run them.
 7. Sweep the diff for changes no contract explains and list them without judging correctness.
 8. Report the earliest blocking violation first and mark downstream consequences.
-9. Do not edit files, run builds or tests, or trigger state-changing commands.
+9. Do not edit files, run builds or tests, persist review artifacts, or trigger state-changing commands. The caller owns review persistence and adjudication.
 
 ## Evidence standard
 
@@ -47,6 +48,19 @@ Assign exactly one status per contract:
 - `unverifiable`: confirmation requires runtime, hardware, or external services
 
 Confirm every `violated` status and every bypass-free claim with your own search, including alias and string forms. Absence is easy to misjudge.
+
+For every `violated` contract, assign exactly one violation type from this stable taxonomy:
+
+- `missing-implementation`
+- `partial-implementation`
+- `forbidden-path-remains`
+- `missing-negative-path`
+- `missing-regression-test`
+- `behavioral-mismatch`
+- `responsibility-boundary`
+- `compatibility-migration`
+
+Choose the type that best describes the primary conformance failure. Do not assign a violation type to contracts with any other status.
 
 ## Delegation
 
@@ -64,8 +78,9 @@ Start with `CONFORMS`, `DIVERGES`, or `INCOMPLETE`, a 1–3 sentence explanation
 Then provide:
 
 - Coverage: per plan section, counts by status, and any unreviewed section.
-- Violations: grouped by plan section, earliest blocking one first. Give the contract, promised behavior, actual behavior and evidence, impact, and one remedy.
-- Accepted deviations: one line for each `satisfied-differently` contract.
+- Contract results: for each contract, give its stable ID, plan section, status, and concise behavioral evidence.
+- Violations: grouped by plan section, earliest blocking one first. Give the contract ID, violation type, promised behavior, actual behavior and evidence, impact, and one remedy.
+- Accepted deviations: one line for each `satisfied-differently` contract, keyed by contract ID.
 - Out-of-plan changes: changes no contract explains, listed without judging them.
 
-State which contracts relied on delegated scout evidence. If coverage is incomplete, name the uncovered sections rather than presenting a partial review as complete.
+State which contracts relied on delegated scout evidence. If coverage is incomplete, name the uncovered sections rather than presenting a partial review as complete. Callers may persist and aggregate the stable IDs, statuses, and violation types across review runs.
