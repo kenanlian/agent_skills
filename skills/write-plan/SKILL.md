@@ -9,10 +9,11 @@ disable-model-invocation: true
 <critical>
 Plan-writing mode is active.
 
-- The ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
+- Before plan review begins, the ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
+- If the user selects plan review, you may additionally create and update only that review run's audit artifacts under `.dev/plan-review/<review-run-id>/` as specified below. No other working-tree file may be changed.
 - Never create, edit, delete, or rename any other working-tree file.
 - Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Read-only shell commands and genuinely non-mutating checks are allowed.
-- Never delete or rename an existing plan file.
+- Never delete or rename an existing plan file or prior review artifact.
 - Never implement the plan in this session. Execution happens later in a fresh session that starts from the saved plan.
 - Never ask for implementation approval. The optional plan-review choice described below is a quality gate, not implementation approval.
 </critical>
@@ -123,6 +124,129 @@ Read the complete plan and apply these gates:
 
 After the plan is decision-complete, honor any review preference the user already stated. Otherwise use the host's available user-input mechanism to ask whether to run `review-plan`, and recommend review when any of these apply: multiple affected subsystems, public interfaces, migrations or compatibility, authorization or security, billing or destructive behavior, concurrency, external side effects, rollout ordering, unverified external facts, or a large multi-package DAG. For a small low-risk change, recommend skipping while leaving the choice to the user.
 
-If the user chooses review, follow `delegate-work` and dispatch an independent read-only reviewer that loads `review-plan` and receives the exact plan path. Verify every blocking finding yourself. Revise the plan for confirmed in-scope findings and repeat review until `APPROVE`; ask the user only when correction needs a new preference, authority, external side effect, or scope expansion. If an independent reviewer is unavailable or stalls beyond a reasonable bounded-review window, interrupt it, perform the same review directly, disclose that limitation, and do not spawn a replacement.
+If review is skipped, do not create plan-review artifacts. If review is selected, follow the persistence protocol below before dispatching the reviewer.
 
-Finish by reporting the exact plan path, a 2–3 sentence approach summary, and whether review was approved, skipped, or unavailable. Stop without implementation.
+## Persist plan-review evidence
+
+The main planning agent owns review persistence. The `review-plan` subagent remains read-only and only returns its report.
+
+Derive `<slug>` from the plan basename by removing `.md` and then a final `-plan`. Create a new review run ID `<slug>-review-YYYYMMDD-HHmmss` using host-local time and create `.dev/plan-review/<review-run-id>/`. Never reuse, overwrite, rename, or delete an earlier review run. A later planning session that reviews the same stable plan starts a new timestamped review run.
+
+Create `manifest.md` before the first review round:
+
+```markdown
+---
+review_run_id: <review-run-id>
+plan: <exact plan path>
+started: <timestamp>
+completed: <timestamp or null>
+rounds: 0
+final_verdict: <APPROVE | REVISE | pending>
+---
+
+# Plan review manifest
+
+## Reviewer provenance
+
+- write-plan skill SHA-256: `<digest of exact loaded skill contents when accessible, otherwise unknown>`
+- review-plan skill SHA-256: `<digest when accessible, otherwise unknown>`
+- main-agent model: `<exact host-reported identifier, or unknown>`
+- main-agent reasoning configuration: `<exact host-reported value, or unknown>`
+
+## Repository context
+
+- Baseline commit: `<sha>`
+- Relevant pre-existing changes: `<paths and notes, or None>`
+
+## Rounds
+
+- Pending
+
+## Final summary
+
+- Pending
+```
+
+Do not infer unavailable provenance. Prefer SHA-256 of the exact loaded skill contents over a manually maintained version label. Record reviewer model or reasoning configuration in the raw review file when the host exposes them; otherwise use `unknown`.
+
+For every review invocation, allocate the next integer round. Before dispatching the reviewer:
+
+1. Read the complete current plan and compute its SHA-256.
+2. Save an exact immutable copy as `round-NN-plan.md`. This snapshot is the authoritative plan revision that the reviewer saw; later plan edits must never modify it.
+3. Record the current repository `HEAD` and task-relevant dirty-state summary.
+4. Dispatch the read-only `review-plan` subagent with the exact live plan path. Do not give it persistence authority.
+
+When the reviewer returns, immediately save `round-NN-review.md` before editing the live plan. Preserve the reviewer's report verbatim:
+
+```markdown
+---
+review_run_id: <review-run-id>
+round: <N>
+reviewed_plan_sha256: <digest matching round-NN-plan.md>
+repository_head: <sha>
+reviewer_skill_sha256: <digest or unknown>
+reviewer_model: <exact host-reported identifier or unknown>
+reviewer_reasoning: <exact host-reported value or unknown>
+started: <timestamp>
+completed: <timestamp>
+verdict: <APPROVE | REVISE>
+confidence: <0.0-1.0 or unknown>
+---
+
+# Raw plan review
+
+<reviewer return reproduced verbatim>
+```
+
+The plan snapshot is a plan-review-specific requirement: unlike a code diff anchored by repository state, the live plan is intentionally rewritten between review rounds. A hash alone is insufficient for later audit because the reviewed text may no longer exist anywhere else.
+
+After persisting the raw review, independently validate every `PR-*` finding against the plan and repository. Write `round-NN-adjudication.md` before revising the live plan. Include every reported `P0`–`P3` finding so later analysis can distinguish reviewer claims from accepted planning defects:
+
+```markdown
+---
+review_run_id: <review-run-id>
+round: <N>
+adjudicated_at: <timestamp>
+reviewed_plan_sha256: <digest>
+---
+
+# Plan review adjudication
+
+### PR-01 — <short title>
+
+- Reviewer severity: `<P0-P3>`
+- Reviewer category: `<category>`
+- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
+- Reason: `<plan/repository-backed adjudication>`
+- Evidence: `<plan section plus repository anchor when applicable>`
+- Resolution: `<incorporated | no-change | needs-user-direction | pending>`
+- Revision evidence: `<changed plan section/contract/package, None, or Pending>`
+
+## Round summary
+
+- Findings: `<reported N; confirmed N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
+```
+
+Do not add retrospective root-cause or prevention-layer judgments during planning. Those belong to later audit.
+
+For a `REVISE` round, revise the live plan for confirmed in-scope findings, then update each adjudication entry's resolution and revision evidence. Record the resulting live plan SHA-256 in the round summary after all authorized revisions are complete. For an `APPROVE` round with no findings, still create an adjudication file with zero counts so every review invocation has a complete raw-review/adjudication pair.
+
+Update `manifest.md` after every round with a compact entry containing:
+
+- reviewed plan snapshot path and SHA-256;
+- raw review and adjudication paths;
+- verdict and confidence;
+- finding counts by adjudication status; and
+- resulting live plan SHA-256 after any revision.
+
+Set `rounds` to the highest completed round. When the review gate closes at `APPROVE`, set `completed`, `final_verdict: APPROVE`, and a final aggregate summary. Keep field names and enums stable so future audit scripts can compare plan-review categories, severities, confirmation rates, rounds-to-approval, reviewer model/skill versions, and which kinds of planning gaps recur.
+
+## Run, adjudicate, and repeat plan review
+
+Follow `delegate-work` and dispatch an independent read-only reviewer that loads `review-plan` and receives the exact plan path. Persist the snapshot and raw return as specified above. Verify every finding yourself and persist adjudication before changing the plan.
+
+Revise the plan for confirmed in-scope findings and repeat review until `APPROVE`; every rerun is a new numbered round with its own immutable plan snapshot, raw review, and adjudication. Ask the user only when correction needs a new preference, authority, external side effect, or scope expansion.
+
+If an independent reviewer is unavailable or stalls beyond a reasonable bounded-review window, interrupt it, perform the same review directly, disclose that limitation, and persist the direct review using the same round artifacts with reviewer provenance identifying the main agent.
+
+Finish by reporting the exact plan path, plan-review artifact directory when review ran, a 2–3 sentence approach summary, and whether review was approved, skipped, or unavailable. Stop without implementation.
