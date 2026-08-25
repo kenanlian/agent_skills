@@ -72,8 +72,9 @@ Package status is one of `pending`, `in-progress`, `verified`, or `blocked`.
 ## Review gate
 
 - User choice: `<both | conformance-only | patch-only | skip | pending>`
-- Conformance review: `<result, findings, and rerun status, or Not selected>`
-- Patch review: `<result, findings, and rerun status, or Not selected>`
+- Review artifact directory: `<path, Not created, or Not selected>`
+- Conformance review: `<latest verdict, round, and rerun status, or Not selected>`
+- Patch review: `<latest verdict, round, and rerun status, or Not selected>`
 
 ## Completion
 
@@ -123,11 +124,144 @@ After implementation and final verification pass, set state to `awaiting-review-
 
 If both are selected, follow `delegate-work` and launch independent read-only reviewers concurrently:
 
-- `review-plan-conformance` receives the exact plan path, execution diff/workspace, and no implementation authority;
-- `review-patch` receives the exact diff/workspace and intended behavior, and hunts defects beyond plan conformance.
+- `review-plan-conformance` receives the exact plan path, execution diff/workspace, and no implementation or persistence authority;
+- `review-patch` receives the exact diff/workspace and intended behavior, and hunts defects beyond plan conformance with no implementation or persistence authority.
 
-The main agent validates every reported violation or finding against the repository. Set state to `fixing-review-findings`, automatically fix confirmed findings that stay within the authorized plan, rerun affected focused checks and the complete final verification, then repeat every selected review until conformance is `CONFORMS` and patch review is `correct`. Keep one review selected if the other was not requested.
+If only one review is selected, use the same persistence and adjudication protocol below for that reviewer.
+
+## Persist review evidence
+
+The main agent owns review persistence. Review subagents remain read-only and only return their reports.
+
+When at least one review is selected, derive `<execution-id>` from the execution state basename without `.md`, for example `foo-execution-20260825-173000`. Create `.dev/review/<execution-id>/` and keep it permanently beside the execution state. Never overwrite or delete a prior round.
+
+Create `manifest.md` before the first review round. It is an index and compact aggregate, not a replacement for raw review evidence. Record:
+
+```markdown
+---
+execution_id: <execution-id>
+execution_state: <exact state path>
+plan: <exact plan path>
+plan_sha256: <digest>
+baseline_commit: <sha>
+review_choice: <both | conformance-only | patch-only>
+started: <timestamp>
+completed: <timestamp or null>
+rounds: 0
+final_patch_verdict: <correct | incorrect | not-selected | pending>
+final_conformance_verdict: <CONFORMS | DIVERGES | INCOMPLETE | not-selected | pending>
+---
+
+# Review manifest
+
+## Reviewer provenance
+
+- execute-plan skill SHA-256: `<digest of the exact loaded skill file when accessible, otherwise unknown>`
+- review-patch skill SHA-256: `<digest when selected and accessible, otherwise unknown or not-selected>`
+- review-plan-conformance skill SHA-256: `<digest when selected and accessible, otherwise unknown or not-selected>`
+- main-agent model: `<exact host-reported identifier, or unknown>`
+- main-agent reasoning configuration: `<exact host-reported value, or unknown>`
+
+## Rounds
+
+- Pending
+
+## Final summary
+
+- Pending
+```
+
+Do not infer unavailable provenance. Prefer a SHA-256 of the exact skill contents loaded for this run over a manually maintained version label. If the host exposes the reviewer subagent's model or reasoning configuration, record those in that review file; otherwise record `unknown`.
+
+For every review invocation, allocate the next integer round and snapshot the reviewed repository state before dispatch: current `HEAD`, whether the review covers committed changes, workspace changes, or both, and the relevant diff base/range when one exists. Use zero-padded filenames:
+
+- `round-01-review-patch.md`
+- `round-01-plan-conformance.md`
+- `round-01-adjudication.md`
+- `round-02-review-patch.md`
+- `round-02-plan-conformance.md`
+- `round-02-adjudication.md`
+
+Create only the reviewer files selected for that execution. A review file must contain provenance plus the reviewer's returned report verbatim so later audits can distinguish what the reviewer actually claimed from what the main agent concluded:
+
+```markdown
+---
+execution_id: <execution-id>
+round: <N>
+reviewer: <review-patch | review-plan-conformance>
+reviewed_head: <sha>
+review_scope: <workspace | commit-range | workspace-and-commits>
+diff_base: <sha/ref or null>
+diff_head: <sha/ref or WORKTREE>
+reviewer_skill_sha256: <digest or unknown>
+reviewer_model: <exact host-reported identifier or unknown>
+reviewer_reasoning: <exact host-reported value or unknown>
+started: <timestamp>
+completed: <timestamp>
+---
+
+# Raw review
+
+<reviewer return reproduced verbatim>
+```
+
+Persist the raw review immediately after each reviewer returns and before fixing anything. If concurrent reviewers return at different times, persist each completed result independently rather than waiting to rewrite them together.
+
+After all selected reviewers for the round have returned, the main agent independently validates every reported patch finding and every conformance violation against the repository. Write `round-NN-adjudication.md` before making review-driven fixes. Use one entry for every reported `RP-*` finding and every `violated` conformance contract:
+
+```markdown
+---
+execution_id: <execution-id>
+round: <N>
+adjudicated_at: <timestamp>
+head_before_fixes: <sha>
+---
+
+# Review adjudication
+
+## Patch findings
+
+### RP-01 — <title>
+
+- Reviewer category: `<category>`
+- Reviewer priority: `<P0-P3>`
+- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
+- Reason: `<repository-backed adjudication>`
+- Evidence: `<file:line or other concrete evidence>`
+- Resolution: `<fixed | no-change | needs-user-direction | pending>`
+- Fix evidence: `<changed file/check, None, or Pending>`
+
+## Conformance violations
+
+### <contract-id> — <short description>
+
+- Violation type: `<reviewer-provided type>`
+- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
+- Reason: `<repository-backed adjudication>`
+- Evidence: `<file:line or other concrete evidence>`
+- Resolution: `<fixed | no-change | needs-user-direction | pending>`
+- Fix evidence: `<changed file/check, None, or Pending>`
+
+## Round summary
+
+- Patch: `<reported N; confirmed N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
+- Conformance: `<reported violations N; confirmed N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
+```
+
+Do not add retrospective root-cause or prevention-layer judgments during execution. Those belong to later audit and analysis, not to the executing agent.
+
+For `review-plan-conformance`, preserve the entire raw contract coverage table in its raw review file, including `satisfied`, `satisfied-differently`, and `unverifiable` contracts. The adjudication file only needs entries for reported violations unless the main agent must explicitly resolve another status to close the gate.
+
+Update `manifest.md` after each round by appending one compact round summary with links/paths to its raw review and adjudication files, counts, verdicts, and the repository state reviewed. Never rewrite raw round evidence to match later fixes. Set `rounds` to the highest completed round. On completion, set final verdicts and `completed` in the manifest.
+
+The review directory is an analysis dataset as well as an audit trail. Keep field names and status enums stable across runs so future scripts can aggregate category frequencies, violation types, confirmation rates, repeated-round findings, and reviewer behavior across skill or model versions.
+
+## Adjudicate, fix, and rerun reviews
+
+After persisting the round's raw reports and adjudication, set state to `fixing-review-findings`. Automatically fix confirmed findings that stay within the authorized plan, rerun affected focused checks and the complete final verification, then update each adjudication entry's resolution and fix evidence. Do not mutate the raw review file.
+
+Repeat every selected review until conformance is `CONFORMS` and patch review is `correct`. Each rerun is a new numbered round with new raw review and adjudication files, even when it reports zero findings. Keep one review selected if the other was not requested.
 
 Ask the user before any correction that expands scope, changes product or architecture decisions, needs new authority, or introduces an additional external effect. Record `unverifiable` contracts and external limitations; if they prevent the selected gate from reaching a truthful pass, stop for user direction rather than downgrading the verdict.
 
-If reviews are skipped, record `skip`. Mark the state `completed` only after the user-selected review path is closed. Report the implemented outcome, state-file path, focused and final verification results, review choice and verdicts, and any residual limitation.
+If reviews are skipped, record `skip` in the execution state and do not create a review artifact directory. Mark the state `completed` only after the user-selected review path is closed. Report the implemented outcome, state-file path, review-artifact directory when one exists, focused and final verification results, review choice and final verdicts, and any residual limitation.
