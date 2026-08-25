@@ -11,7 +11,7 @@ Determine whether the saved plan alone carries a fresh implementer from current 
 
 `Plan File` is required. Read the complete file yourself; never review a summary or reconstruct a missing plan from conversation, code, or a diff. Review against the current workspace unless the caller names another repository. `Scope` may narrow plan sections and `Custom Instructions` may add explicit constraints.
 
-If the file is missing or unreadable, stop and ask for the exact path. Remain advisory: do not edit the plan or code, run tests or builds, or trigger state-changing commands. Judge whether the selected design is executable; do not replace a workable design merely because another is preferable. Use `review-patch` for implementation defects.
+If the file is missing or unreadable, stop and ask for the exact path. Remain advisory: do not edit the plan or code, run tests or builds, persist review artifacts, or trigger state-changing commands. The caller owns review persistence and adjudication. Judge whether the selected design is executable; do not replace a workable design merely because another is preferable. Use `review-patch` for implementation defects.
 
 The reviewing agent owns every severity and the final verdict. Scouts locate and trace evidence but never decide whether the plan passes.
 
@@ -62,14 +62,32 @@ After the coverage model identifies independent questions, follow `delegate-work
 
 Confirm every blocking finding, every “no other route exists” claim, and every delegated negative result yourself. Resume an unusable scout rather than replacing it.
 
-## Severity and verdict
+## Severity, category, and verdict
 
-Assign one severity to every required revision:
+Assign one severity to every finding:
 
 - `P0`: execution can cause release-blocking, severe security/data, or broadly irreversible harm;
 - `P1`: a missing or false load-bearing decision, interface, dependency, baseline, or verification path makes execution unsafe or likely wrong;
 - `P2`: a meaningful edge case, integration path, work-package boundary, or acceptance criterion is incomplete;
 - `P3`: actionable clarity or maintainability weakness that does not block safe execution.
+
+Assign exactly one category to every finding from this stable taxonomy:
+
+- `requirement-coverage`
+- `source-grounding`
+- `decision-completeness`
+- `interface-closure`
+- `work-package-boundary`
+- `dag-safety`
+- `verification-gap`
+- `failure-behavior`
+- `compatibility-rollout`
+- `security-data`
+- `baseline-drift`
+
+Choose the category that best identifies the plan-quality failure that must be corrected, not every downstream area it could affect.
+
+Give findings stable IDs in report order: `PR-01`, `PR-02`, and so on. IDs are report-local and need only remain stable within this review invocation; the caller may persist them for later adjudication.
 
 Return `REVISE` when any `P0`–`P2` gap prevents decision-complete execution or proof of the promised behavior. Return `APPROVE` only when the full requested scope is covered and current repository evidence supports execution. `P3` alone is non-blocking.
 
@@ -80,8 +98,8 @@ Start with `APPROVE` or `REVISE`, a 1–3 sentence summary, and confidence from 
 Then provide:
 
 - **Coverage matrix:** one compact row per `R*`/`C*`, naming its `WP-*`, `V*`, and `covered` or `missing` status.
-- **Required revisions:** omit when approving. Group by plan section or package, earliest dependency failure first. For each, give severity, missing or false contract, repository evidence, execution or verification impact, exact decision/information needed, and a concrete `Suggestion:` that can be inserted into the existing design.
-- **Non-blocking risks:** at most two `P3` observations.
+- **Required revisions:** omit when approving. Group by plan section or package, earliest dependency failure first. For each `P0`–`P2` finding, give its `PR-*` ID, severity, category, missing or false contract, repository evidence, execution or verification impact, exact decision/information needed, and a concrete `Suggestion:` that can be inserted into the existing design.
+- **Non-blocking risks:** at most two `P3` findings. Give each its `PR-*` ID, category, concise evidence, impact, and suggestion.
 - **Evidence checked:** source anchors, exhaustive searches, verification criteria, baseline result, and which items used scout evidence.
 
 Do not hide incomplete review behind a partial approval. If any plan section or risk partition could not be reviewed, return `REVISE`, identify the uncovered area, and explain what evidence is missing.
