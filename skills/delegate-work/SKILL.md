@@ -30,13 +30,31 @@ Classify the task by this subagent's requested deliverable, not the parent workf
 
 Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
 
-Every `wait_agent` must set the table's `timeout_ms`; do not omit it or substitute another value. That timeout is a heartbeat, not a kill. If it fires while the subagent is still progressing, wait again with the same value, at most three waits total; then apply the stall policy in Dispatch and collect.
+Every `wait_agent` must set the selected route's `timeout_ms`; do not omit it or substitute another value. That timeout is a heartbeat, not a kill. If it fires while the subagent is still progressing, wait again with the same value, at most three waits total; then apply the stall policy in Dispatch and collect.
 
-| Work type | Model | Reasoning effort | timeout_ms |
+#### Implementation routing
+
+Default to `gpt-5.6-terra` with `high` reasoning for a normal, already-planned work package.
+
+| Situation | Model | Reasoning effort | timeout_ms |
 | --- | --- | --- | --- |
-| Codebase exploration or external-information research | `gpt-5.6-terra` | `medium` | `360000` (6 min) |
-| Code implementation, file changes, or test writing | `gpt-5.6-sol` | `medium` | `480000` (8 min) |
-| Review, design, planning, analysis, or any other task | `gpt-5.6-sol` | `high` | `720000` (12 min) |
+| Default: bounded implementation with settled contracts and ordinary cross-file work | `gpt-5.6-terra` | `high` | `480000` (8 min) |
+| Small, closed local change with frozen interfaces and narrow ownership | `gpt-5.6-luna` | `high` | `360000` (6 min) |
+| Complex cross-subsystem or lifecycle-heavy implementation | `gpt-5.6-terra` | `high` | `480000` (8 min) |
+| Shared contracts, architecture, or difficult integration | `gpt-5.6-sol` | `medium` or `high` | `720000` (12 min) |
+
+#### Exploration routing
+
+Default to `gpt-5.6-luna` with `high` reasoning for a bounded evidence scout.
+
+| Situation | Model | Reasoning effort | timeout_ms |
+| --- | --- | --- | --- |
+| Default: bounded evidence exploration with a clear question and narrowed scope | `gpt-5.6-luna` | `high` | `360000` (6 min) |
+| Simple lookup, symbol/file/test discovery, or narrow call-path trace | `gpt-5.6-luna` | `medium` | `360000` (6 min) |
+| Exhaustive consumer search, negative/bypass sweep, or multi-module interface closure | `gpt-5.6-terra` | `medium` | `480000` (8 min) |
+| Open-ended cross-subsystem exploration where the scout must decide what to inspect | `gpt-5.6-terra` | `high` | `480000` (8 min) |
+
+Review, design, planning, analysis, or any other non-implementation/non-exploration task uses `gpt-5.6-sol` with `high` reasoning and `720000` (12 min) timeout unless a more specific host rule applies.
 
 ### Cursor
 
