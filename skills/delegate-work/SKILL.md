@@ -64,60 +64,19 @@ Record the requested deliverable as one of `exploration`, `research`, `implement
 
 A task whose requested deliverable is code or file changes is `implementation` even when it first needs to inspect the codebase. A scout whose requested deliverable is evidence is `exploration` even when the parent workflow is a review.
 
-## Apply the host adapter
+## Load the host adapter
 
-Keep model names and platform mechanics in this section only. Plans, task DAGs, and callers should express role, tier, access, and work type rather than concrete models.
+After classifying the delegation, load and follow exactly one host reference for the active platform:
 
-### Codex
+- Codex: `references/codex.md`
+- Cursor: `references/cursor.md`
+- OpenCode: `references/opencode.md`
 
-Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
+The host reference owns concrete model mapping, subagent invocation mechanics, platform-specific isolation, waiting or timeout behavior, and platform-specific resume mechanics.
 
-Route by capability tier rather than work type:
+Do not duplicate those details in plans, task DAGs, caller skills, or the common task contract. Do not load unrelated host references merely to compare implementations during normal delegation.
 
-| Route | Model | Reasoning effort | `timeout_ms` heartbeat |
-| --- | --- | --- | --- |
-| `junior` worker | `gpt-5.6-luna` | `medium` or `high` | `360000` (6 min) |
-| `senior` worker | `gpt-5.6-terra` | `high` | `480000` (8 min) |
-| `expert` worker | `gpt-5.6-sol` | `high` | `720000` (12 min) |
-| `reviewer` | `gpt-5.6-sol` | `high` | `720000` (12 min) |
-
-Use `medium` for a truly mechanical `junior` lookup or edit and `high` when even a small task needs careful reasoning. Do not lower a `senior` or `expert` route merely because the work is read-only.
-
-Every `wait_agent` must set the selected route's `timeout_ms`; do not omit it or substitute another value. That timeout is a heartbeat, not a kill. If it fires while the subagent is still progressing, wait again with the same value, at most three waits total; then apply the stall policy in Dispatch and collect.
-
-### Cursor
-
-Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated subagent context and provide the complete task contract; never rely on or attempt to pass the parent conversation.
-
-Route by capability tier:
-
-| Route | Model |
-| --- | --- |
-| `junior` worker | `cursor-grok-4.6-high` |
-| `senior` worker | `cursor-grok-4.6-high` |
-| `expert` worker | `claude-opus-5-thinking-high` |
-| `reviewer` | `gpt-5.6-sol-high` |
-
-It is valid for multiple tiers to map to the same current model. The semantic tier remains stable even when Cursor's available models or pricing change. Change this adapter rather than callers when the preferred mapping changes.
-
-For an unclassified or unsupported Cursor task, use the host-selected model only after assigning the semantic route; do not reintroduce work-type-based model routing.
-
-### OpenCode
-
-OpenCode uses named custom subagents as the adapter. The agent names are stable capability roles; model selection belongs in each OpenCode agent definition, not in this skill.
-
-| Route | OpenCode subagent |
-| --- | --- |
-| `junior` worker | `junior-worker` |
-| `senior` worker | `senior-worker` |
-| `expert` worker | `expert-worker` |
-| `reviewer` | `reviewer` |
-
-Expected definitions live in `platforms/opencode/agents/` in this repository and may be installed globally under `~/.config/opencode/agents/` or copied into a project's `.opencode/agents/` directory. Configure each agent's `model` locally to match the user's available providers and plans. Do not encode Codex, Kimi, GLM, or other provider names into the cross-platform task contract.
-
-The three worker agents may perform either read-only or write tasks according to the task contract, but they must not launch nested subagents. The `reviewer` must remain read-only and must not launch nested subagents.
-
-When correcting a failed OpenCode result, continue the same child session when the host exposes a resume/continue mechanism. Do not silently create a fresh replacement with lost context.
+If the active host is not covered by a reference, keep the common semantic classification and task contract stable, then use only host-native subagent behavior that preserves isolation, bounded scope, and same-subagent correction. Do not invent a cross-platform model mapping.
 
 ## Build the task contract
 
@@ -216,14 +175,11 @@ Do not change the selected capability tier merely because the work type changes 
 ## Dispatch and collect
 
 1. Classify role, capability tier, access, and work type. Name the required domain skill or `None`; do not ask the subagent to guess.
-2. Put only the context needed for the bounded task in the contract. Apply the matching host adapter. In Codex, set `fork_turns: "none"` explicitly.
+2. Load the active host reference and apply its adapter. Put only the context needed for the bounded task in the contract.
 3. Dispatch ready work concurrently only when dependency outputs are stable, write ownership does not overlap, and no shared interface remains unsettled. A dependent task may be delegated serially after its predecessor is verified.
 4. Wait for every result in the current wave and verify its contract, actual edits, and focused checks before releasing dependent work.
 5. Reject and correct any scope violation. A subagent that discovers a necessary out-of-scope edit returns it as a blocker instead of making it.
-6. If a response violates the contract or verification finds an error, do not spawn a replacement. Resume that same subagent with the failed requirement, concrete evidence of the problem, and the exact correction required. Repeat verification and resume until the result passes or the same subagent cannot proceed.
-   - Codex: call `followup_task` with the existing subagent path or task name. Do not use `send_message`, because it does not start a new turn.
-   - Cursor: call the `Task` tool with its `resume` parameter set to the existing `generalPurpose` subagent ID. Supply the correction as the new prompt; do not omit `resume` or start a new subagent.
-   - OpenCode: continue or resume the existing child session using the host's available continuation mechanism. If the current host surface cannot resume it, report that limitation rather than silently replacing it.
-7. Do not wait indefinitely on a stalled subagent. Interrupt it when it has exceeded a reasonable window for its bounded task. For optional scouting or critique, verify that partition directly and disclose the limitation; for a required deliverable, complete it under the parent agent when safe or report the exact blocker. Never spawn a silent replacement.
+6. If a response violates the contract or verification finds an error, do not spawn a replacement. Resume that same subagent using the active host reference's correction mechanism, with the failed requirement, concrete evidence of the problem, and the exact correction required. Repeat verification and resume until the result passes or the same subagent cannot proceed.
+7. Do not wait indefinitely on a stalled subagent. Apply the active host reference's waiting rules when it defines them. Interrupt a genuinely stalled agent when it has exceeded a reasonable window for its bounded task. For optional scouting or critique, verify that partition directly and disclose the limitation; for a required deliverable, complete it under the parent agent when safe or report the exact blocker. Never spawn a silent replacement.
 8. If the original subagent is no longer resumable, report that as a blocker rather than silently creating a new one.
 9. Keep the parent agent grounded in load-bearing repository facts. Summaries reduce noise but do not replace independent verification of public interfaces, data and security boundaries, negative claims, integration behavior, or final acceptance.
