@@ -1,10 +1,10 @@
 # Agent Skills
 
-跨 coding agent 平台共享的个人 Agent Skills 集合。仓库只维护平台无关的 Skill；任务委派使用 Codex、Cursor 等宿主平台提供的内置 subagent，不提供自定义 subagent 配置。
+跨 coding agent 平台共享的个人 Agent Skills 集合。仓库中的 Skill 保持平台无关；`delegate-work` 通过宿主 adapter 将统一的委派语义映射到 Codex、Cursor 和 OpenCode。
 
 ## 安装
 
-将 `skills` 目录直接软链接到项目的 Skill 发现目录。推荐使用两个平台都支持的开放目录：
+将 `skills` 目录直接软链接到项目的 Skill 发现目录。推荐使用多个平台都支持的开放目录：
 
 ```bash
 mkdir -p .agents
@@ -22,9 +22,54 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 ## 委派模型
 
-使用 `delegate-work` Skill 构造自包含的任务契约，并按其中的平台路由选择内置 subagent、模型和推理强度。该 Skill 是委派路由的唯一规范，README 不重复维护易失效的映射。
+`delegate-work` 使用统一的四维语义描述一次委派：
 
-父 Agent 必须明确指定 subagent 要加载的领域 Skill（无适用 Skill 时写 `None`），并提供清楚的任务、目标、范围和返回内容。subagent 在隔离上下文中执行；若返回内容不符合契约或复核有误，父 Agent 必须恢复同一个 subagent 修正，不得新建替代 subagent。
+- `role`: `worker | reviewer`
+- `tier`: `junior | senior | expert`，reviewer 不属于 tier
+- `access`: `read-only | write`
+- `work type`: exploration、research、implementation、design、planning、analysis 或 review
+
+其中 work type 决定任务契约、证据和验证要求；tier 决定 worker 所需的能力预算；各宿主 adapter 再把 tier 映射为具体模型或 subagent。计划和任务 DAG 不应绑定具体模型。
+
+父 Agent 必须明确指定 subagent 要加载的领域 Skill（无适用 Skill 时写 `None`），并提供清楚的任务、目标、范围、权限边界和返回内容。subagent 在隔离上下文中执行；若返回内容不符合契约或复核有误，父 Agent 必须优先恢复同一个 subagent 修正，不得静默新建替代 subagent。
+
+### OpenCode agents
+
+OpenCode 使用四个命名 subagent 作为 host adapter：
+
+```text
+junior-worker
+senior-worker
+expert-worker
+reviewer
+```
+
+模板位于：
+
+```text
+platforms/opencode/agents/
+```
+
+可以复制或软链接到全局配置：
+
+```bash
+mkdir -p ~/.config/opencode/agents
+ln -s /absolute/path/to/agent_skills/platforms/opencode/agents/junior-worker.md ~/.config/opencode/agents/junior-worker.md
+ln -s /absolute/path/to/agent_skills/platforms/opencode/agents/senior-worker.md ~/.config/opencode/agents/senior-worker.md
+ln -s /absolute/path/to/agent_skills/platforms/opencode/agents/expert-worker.md ~/.config/opencode/agents/expert-worker.md
+ln -s /absolute/path/to/agent_skills/platforms/opencode/agents/reviewer.md ~/.config/opencode/agents/reviewer.md
+```
+
+也可以放到项目级 `.opencode/agents/`。
+
+仓库模板故意不写死 `model`，因为 OpenCode 中可用的 provider/model ID 取决于本地接入的 Codex、Kimi、GLM 等服务。安装后在四个 agent 的 frontmatter 中取消 `model:` 示例注释并填写本地有效的 `provider/model#variant`。推荐语义映射是：
+
+- `junior-worker` → 低成本、快速的 coding model；
+- `senior-worker` → 默认主力 coding model；
+- `expert-worker` → 最强的 coding/reasoning model；
+- `reviewer` → 强 review model，尽量与产生被审查工作的模型不同。
+
+三个 worker 禁止继续启动嵌套 subagent；`reviewer` 额外禁止文件编辑。具体任务是否可写仍由 `delegate-work` task contract 的 `access` 和 write ownership 决定。
 
 ## 计划工作流
 
