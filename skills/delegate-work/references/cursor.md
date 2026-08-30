@@ -6,18 +6,21 @@ Use this reference only when `delegate-work` is running under Cursor. The common
 
 Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated subagent context and provide the complete task contract; never rely on or attempt to pass the parent conversation.
 
-Route by capability tier rather than work type:
+Route `explorer` by its specialized role and route workers by capability tier:
 
 | Route | Model |
 | --- | --- |
+| `explorer` | `composer-2.5` |
 | `junior` worker | `cursor-grok-4.6-high` |
 | `senior` worker | `cursor-grok-4.6-high` |
 | `expert` worker | `claude-opus-5-thinking-high` |
 | `reviewer` | `gpt-5.6-sol-high` |
 
-It is valid for multiple tiers to map to the same current model. The semantic tier remains stable even when Cursor's available models or pricing change. Change this adapter rather than callers when the preferred mapping changes.
+The explorer route is a deliberate role-based exception to worker tier routing. It is optimized for high-coverage repository evidence gathering and remains read-only through the common task contract.
 
-For an unclassified or unsupported Cursor task, use the host-selected model only after assigning the semantic route; do not reintroduce work-type-based model routing.
+It is valid for multiple worker tiers to map to the same current model. The semantic tier remains stable even when Cursor's available models or pricing change. Change this adapter rather than callers when the preferred mapping changes.
+
+For an unclassified or unsupported Cursor task, use the host-selected model only after assigning the semantic route; do not collapse exploration, worker reasoning, and review into one work-type-based model rule.
 
 ## Correction and resume
 
