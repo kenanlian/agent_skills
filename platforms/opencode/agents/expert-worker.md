@@ -1,8 +1,7 @@
 ---
 description: Handles complex, ambiguous, cross-module, architecture-sensitive, or high-risk delegated tasks requiring deep reasoning.
 mode: subagent
-# Set model locally, for example to the strongest coding/reasoning model available through your OpenCode providers.
-# model: provider/model#variant
+model: openai/gpt-5.6-sol#high
 permissions:
   - action: subagent
     resource: "*"
