@@ -1,7 +1,0 @@
-interface:
-  display_name: "Software Decision Brainstorm"
-  short_description: "Deliberate consequential software decisions with evidence"
-  default_prompt: "Use $brainstorm-software-decisions to evaluate this major software tradeoff, challenge the leading option, and identify its decision boundaries."
-
-policy:
-  allow_implicit_invocation: false
