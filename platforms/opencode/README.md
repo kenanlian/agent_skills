@@ -4,19 +4,28 @@ The OpenCode adapter described by `skills/delegate-work/SKILL.md` uses the built
 
 Install the four custom templates globally under `~/.config/opencode/agents/` or per project under `.opencode/agents/`. No custom explorer template is required.
 
-Explorer routing is fixed semantically:
+The OpenCode model routing is fixed as follows:
 
-- `explorer` -> built-in `Explore` subagent for read-only repository evidence gathering
+- `explorer` -> built-in `Explore` -> `opencode-go/deepseek-v4-flash#high`
+- `junior-worker` -> `opencode-go/deepseek-v4-flash#high`
+- `senior-worker` -> `opencode-go/deepseek-v4-pro#high`
+- `expert-worker` -> `openai/gpt-5.6-sol#high`
+- `reviewer` -> `openai/gpt-5.6-sol#high`
 
-The repository does not bind a model for built-in `Explore`; OpenCode owns that subagent's model routing.
+The four custom agent templates bind their models directly in frontmatter. The built-in `Explore` subagent must be overridden in OpenCode configuration because it has no checked-in custom template. Configure it like this:
 
-Each custom template intentionally leaves `model` commented out. After installation, set the model available in that OpenCode environment using the stable semantic mapping below:
+```jsonc
+{
+  "agent": {
+    "explore": {
+      "model": "opencode-go/deepseek-v4-flash#high"
+    }
+  }
+}
+```
 
-- `junior-worker` -> low-cost, fast model for straightforward bounded work
-- `senior-worker` -> default model for normal software engineering work
-- `expert-worker` -> strongest model for complex, ambiguous, cross-module, or high-risk work
-- `reviewer` -> strong independent review model, preferably different from the model that produced the work when practical
+`opencode-go` requires an active OpenCode Go connection. `openai/gpt-5.6-sol#high` assumes OpenAI is connected through the OpenCode OpenAI provider, including ChatGPT Plus/Pro OAuth where available.
 
-Provider and model choices for custom agents belong in these OpenCode agent definitions. Do not copy provider names into plans, task DAGs, or the common `delegate-work` task contract.
+Provider and model choices belong in the OpenCode platform adapter and agent definitions. Do not copy provider names into plans, task DAGs, or the common `delegate-work` task contract.
 
 The three worker agents deny nested subagent launches. The reviewer additionally denies edits so it remains an independent read-only reviewer. Built-in `Explore` is used only for contracts classified by `delegate-work` as read-only exploration.
