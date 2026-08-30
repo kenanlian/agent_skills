@@ -1,8 +1,7 @@
 ---
 description: Default worker for normal software-engineering tasks requiring moderate context, judgment, and cross-file reasoning.
 mode: subagent
-# Set model locally, for example to the preferred default coding model available through your OpenCode providers.
-# model: provider/model#variant
+model: opencode-go/deepseek-v4-pro#high
 permissions:
   - action: subagent
     resource: "*"
