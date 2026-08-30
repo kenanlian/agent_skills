@@ -1,8 +1,7 @@
 ---
 description: Independently reviews plans, patches, implementations, and engineering decisions without modifying the work under review.
 mode: subagent
-# Set model locally to a strong review model, preferably different from the model that produced the work being reviewed.
-# model: provider/model#variant
+model: openai/gpt-5.6-sol#high
 permissions:
   - action: edit
     resource: "*"
