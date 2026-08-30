@@ -6,16 +6,17 @@ Use this reference only when `delegate-work` is running under Codex. The common 
 
 Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
 
-Route by capability tier rather than work type:
+Route `explorer` by its specialized role and route workers by capability tier:
 
 | Route | Model | Reasoning effort | `timeout_ms` heartbeat |
 | --- | --- | --- | --- |
+| `explorer` | `gpt-5.6-luna` | `high` | `360000` (6 min) |
 | `junior` worker | `gpt-5.6-luna` | `medium` or `high` | `360000` (6 min) |
 | `senior` worker | `gpt-5.6-terra` | `high` | `480000` (8 min) |
 | `expert` worker | `gpt-5.6-sol` | `high` | `720000` (12 min) |
 | `reviewer` | `gpt-5.6-sol` | `high` | `720000` (12 min) |
 
-Use `medium` only for a truly mechanical `junior` lookup or edit and `high` when even a small task needs careful reasoning. Do not lower a `senior` or `expert` route merely because the work is read-only.
+The explorer always uses `high`: its work may require broad or exhaustive repository tracing even though it does not own engineering judgment. Use `medium` only for a truly mechanical `junior` worker task and `high` when even a small worker task needs careful reasoning. Do not lower a `senior` or `expert` route merely because the work is read-only.
 
 ## Waiting and stall handling
 
