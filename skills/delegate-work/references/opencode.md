@@ -6,41 +6,40 @@ Use this reference only when `delegate-work` is running under OpenCode. The comm
 
 OpenCode uses its built-in `Explore` subagent for the specialized explorer role and named custom subagents for tiered workers and review.
 
-| Route | OpenCode subagent | Model |
-| --- | --- | --- |
-| `explorer` | built-in `Explore` | `opencode-go/deepseek-v4-flash#high` |
-| `junior` worker | `junior-worker` | `opencode-go/deepseek-v4-flash#high` |
-| `senior` worker | `senior-worker` | `opencode-go/deepseek-v4-pro#high` |
-| `expert` worker | `expert-worker` | `openai/gpt-5.6-sol#high` |
-| `reviewer` | `reviewer` | `openai/gpt-5.6-sol#high` |
+| Route | OpenCode subagent |
+| --- | --- |
+| `explorer` | built-in `Explore` |
+| `junior` worker | `junior-worker` |
+| `senior` worker | `senior-worker` |
+| `expert` worker | `expert-worker` |
+| `reviewer` | `reviewer` |
 
-The custom agent definitions live in `platforms/opencode/agents/` in this repository and may be installed globally under `~/.config/opencode/agents/` or copied into a project's `.opencode/agents/` directory. Their checked-in frontmatter is the source of truth for worker and reviewer model selection.
+This repository intentionally does not bind these routes to concrete providers or models. OpenCode user configuration owns the implementation of each named subagent and the model used by built-in `Explore`. Keep those runtime choices in the user's OpenCode configuration or dotfiles rather than in `agent_skills`.
 
-No custom explorer definition is required. Override the built-in `Explore` model in OpenCode configuration:
+Plans, task DAGs, caller skills, and the common delegation contract must refer only to the semantic role/tier or the logical OpenCode subagent name. They must not depend on provider names or model IDs.
 
-```jsonc
-{
-  "agent": {
-    "explore": {
-      "model": "opencode-go/deepseek-v4-flash#high"
-    }
-  }
-}
-```
-
-`opencode-go` requires an active OpenCode Go connection. The `openai/gpt-5.6-sol#high` routes assume OpenAI is connected through OpenCode's OpenAI provider, including ChatGPT Plus/Pro OAuth where available.
-
-These concrete provider and model choices are platform-adapter details. Do not encode OpenCode Go, OpenAI, Codex, or model names into the cross-platform task contract, plans, or task DAGs.
-
-## Permissions
+## Required agent behavior
 
 Use built-in `Explore` only for contracts classified as `explorer`; the common contract requires those tasks to remain read-only and evidence-only.
 
-The three custom worker agents may perform either read-only or write tasks according to the common task contract, but they must not launch nested subagents.
+The `junior-worker`, `senior-worker`, and `expert-worker` agents may perform either read-only or write tasks according to the common task contract. Their OpenCode definitions must deny nested subagent launches.
 
-The `reviewer` must remain read-only and must not launch nested subagents.
+The `reviewer` must remain read-only and must deny nested subagent launches.
 
-The checked-in templates under `platforms/opencode/agents/` are the source of truth for custom-agent permission defaults. Task-specific worker write ownership and access still come from the common task contract.
+Task-specific worker write ownership and access always come from the common task contract. The OpenCode agent definitions provide platform-level safety defaults; they do not override a narrower task contract.
+
+## Runtime configuration boundary
+
+Concrete provider selection, model IDs, variants, credentials, and OpenCode configuration files are environment configuration, not skill logic. Manage them outside this repository, preferably in the user's dotfiles.
+
+A compatible OpenCode environment must provide:
+
+- the built-in `Explore` agent;
+- custom `junior-worker`, `senior-worker`, `expert-worker`, and `reviewer` agents;
+- the permission defaults described above; and
+- whatever local provider/model routing the user chooses for those agents.
+
+Changing a model or provider must not require changing this adapter unless the logical OpenCode subagent interface itself changes.
 
 ## Correction and resume
 
