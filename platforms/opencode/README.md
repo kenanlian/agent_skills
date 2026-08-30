@@ -12,17 +12,18 @@ The OpenCode model routing is fixed as follows:
 - `expert-worker` -> `openai/gpt-5.6-sol#high`
 - `reviewer` -> `openai/gpt-5.6-sol#high`
 
-The four custom agent templates bind their models directly in frontmatter. The built-in `Explore` subagent must be overridden in OpenCode configuration because it has no checked-in custom template. Configure it like this:
+The four custom agent templates bind their models directly in frontmatter. The built-in `Explore` subagent is overridden by the checked-in `opencode.jsonc` in this directory.
 
-```jsonc
-{
-  "agent": {
-    "explore": {
-      "model": "opencode-go/deepseek-v4-flash#high"
-    }
-  }
-}
+For a global setup, this file can be symlinked to OpenCode's global config location:
+
+```bash
+mkdir -p ~/.config/opencode
+ln -s /absolute/path/to/agent_skills/platforms/opencode/opencode.jsonc ~/.config/opencode/opencode.jsonc
 ```
+
+If `~/.config/opencode/opencode.jsonc` already exists, merge the `agent.explore` entry instead of replacing unrelated local settings. OpenCode merges configuration from multiple supported locations, so `OPENCODE_CONFIG` is also an option when a direct symlink is not desirable.
+
+The custom agent Markdown files still need to be installed or symlinked under `~/.config/opencode/agents/` (or per-project `.opencode/agents/`).
 
 `opencode-go` requires an active OpenCode Go connection. `openai/gpt-5.6-sol#high` assumes OpenAI is connected through the OpenCode OpenAI provider, including ChatGPT Plus/Pro OAuth where available.
 
