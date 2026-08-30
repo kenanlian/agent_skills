@@ -1,8 +1,7 @@
 ---
 description: Executes straightforward, well-scoped delegated tasks that require limited reasoning and have clear boundaries.
 mode: subagent
-# Set model locally, for example to the preferred low-cost coding model available through your OpenCode providers.
-# model: provider/model#variant
+model: opencode-go/deepseek-v4-flash#high
 permissions:
   - action: subagent
     resource: "*"
