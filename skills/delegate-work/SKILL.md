@@ -7,7 +7,7 @@ description: Delegate bounded exploration, implementation, review, design, or re
 
 The parent agent is the control plane: it owns decomposition, shared contracts, cross-task decisions, integration, verification, and the final answer. Subagents perform bounded work; serial work may still be delegated when its inputs are stable and its result is independently verifiable.
 
-Use one platform-neutral delegation model. Work type defines the task contract; capability tier defines the reasoning budget; the host adapter translates that tier into platform-specific subagent and model selection.
+Use one platform-neutral delegation model. Role separates specialized exploration and review from tiered worker reasoning. Work type defines the task contract; capability tier applies only to workers; the host adapter translates the semantic route into platform-specific subagent and model selection.
 
 ## Require a bounded task
 
@@ -28,12 +28,19 @@ Classify every delegation along four independent dimensions before selecting a h
 
 ### Role
 
-- `worker`: performs bounded exploration, research, implementation, design, planning, or analysis.
+- `explorer`: performs bounded, read-only repository evidence discovery. It locates, traces, maps, enumerates, and cross-checks files, symbols, callers, consumers, routes, tests, registrations, state or data flows, and other repository facts. It owns evidence, not engineering judgment.
+- `worker`: performs bounded research, implementation, design, planning, or analysis that requires task-local engineering judgment.
 - `reviewer`: independently evaluates an artifact or implementation. A reviewer is a special role, not a stronger worker tier.
 
-Use `reviewer` only when the delegated task owns an independent judgment. A read-only evidence scout dispatched during a review is still a `worker`.
+Use `explorer` when the requested deliverable is repository evidence: what exists, where it is, who calls or consumes it, how the current code path flows, or whether an exhaustive search finds another route. Search breadth may be broad or exhaustive; breadth alone does not make the task a stronger worker tier. An explorer may explain a current flow when the explanation follows directly from traced evidence, but it must not own root-cause diagnosis, architecture or design choices, correctness judgments, risk decisions, or review verdicts. Route those tasks to an appropriately tiered `worker` or to `reviewer`.
+
+Evidence scouts requested by planning, execution, or review workflows are `explorer` when their deliverable is repository facts, including interface traces, consumer closure, behavioral traces, bypass sweeps, negative searches, verification-path discovery, and ownership checks. The calling worker or reviewer retains every judgment based on that evidence.
+
+Use `reviewer` only when the delegated task owns an independent judgment about an artifact or implementation.
 
 ### Capability tier
+
+Capability tier applies only to `worker`. Both `explorer` and `reviewer` use `None`.
 
 Worker tiers express required reasoning capability, not work type:
 
@@ -41,28 +48,31 @@ Worker tiers express required reasoning capability, not work type:
 - `senior`: default tier for normal software-engineering work requiring moderate context, judgment, or ordinary cross-file reasoning.
 - `expert`: complex, ambiguous, cross-subsystem, architecture-sensitive, lifecycle-heavy, integration-heavy, or high-risk work requiring deep reasoning.
 
-Default to `senior`. Downgrade to `junior` only when the task is clearly small and closed. Upgrade to `expert` when one or more load-bearing complexity signals are present; file count alone is not a tier signal.
+Default a worker to `senior`. Downgrade to `junior` only when the task is clearly small and closed. Upgrade to `expert` when one or more load-bearing complexity signals are present; file count alone is not a tier signal.
 
-Typical `junior` work includes a narrow symbol lookup, a small frozen-interface edit, a simple configuration change, a local UI/style adjustment, or a focused test correction.
+Typical `junior` work includes a small frozen-interface edit, a simple configuration change, a local UI/style adjustment, or a focused test correction.
 
-Typical `senior` work includes a normal planned work package, a bounded multi-file implementation, ordinary bug investigation, subsystem-level exploration, or a moderate refactor with settled contracts.
+Typical `senior` work includes a normal planned work package, a bounded multi-file implementation, ordinary bug investigation, or a moderate refactor with settled contracts.
 
-Typical `expert` work includes cross-subsystem state or lifecycle analysis, difficult integration, architecture or shared-contract work, open-ended root-cause investigation, high-regression-risk changes, or exhaustive negative/bypass reasoning.
+Typical `expert` work includes cross-subsystem state or lifecycle analysis, difficult integration, architecture or shared-contract work, open-ended root-cause investigation, high-regression-risk changes, or exhaustive negative-path reasoning that requires deciding what the evidence means.
 
-A read-only task may be `expert`; a writing task may be `junior`. Do not infer tier from `read-only` versus `write`.
+A read-only worker task may be `expert`; a writing task may be `junior`. Do not infer worker tier from `read-only` versus `write`, and do not promote an explorer merely because its search scope is large.
 
 ### Access
 
-- `read-only`: the subagent may inspect and reason but may not modify the workspace.
-- `write`: the subagent may modify only its explicit write ownership and owns focused tests for those changes.
+- `explorer`: always `read-only`.
+- `worker`: `read-only` or `write` according to the requested deliverable.
+- `reviewer`: always `read-only`.
 
-Access follows the requested deliverable and task contract. It does not select the model tier.
+For a writable worker, the subagent may modify only its explicit write ownership and owns focused tests for those changes. Access follows the requested deliverable and task contract; it does not select the worker model tier.
 
 ### Work type
 
-Record the requested deliverable as one of `exploration`, `research`, `implementation`, `design`, `planning`, `analysis`, or `review`. Work type controls prompt framing, evidence, and verification; it must not directly select the worker model.
+Record the requested deliverable as one of `exploration`, `research`, `implementation`, `design`, `planning`, `analysis`, or `review`. Work type controls prompt framing, evidence, and verification; it does not select a worker model tier.
 
-A task whose requested deliverable is code or file changes is `implementation` even when it first needs to inspect the codebase. A scout whose requested deliverable is evidence is `exploration` even when the parent workflow is a review.
+`exploration` pairs with role `explorer`: its deliverable is repository evidence rather than an engineering judgment. `review` pairs with role `reviewer`. The remaining work types normally pair with role `worker`.
+
+A task whose requested deliverable is code or file changes is `implementation` even when it first needs to inspect the codebase. A task that asks why a traced behavior is wrong, what its root cause is, or how it should be redesigned is `analysis` or `design`, not `exploration`, even when it is read-only.
 
 ## Load the host adapter
 
@@ -85,9 +95,9 @@ Every delegated prompt must be self-contained and minimal because a subagent may
 ```markdown
 ## Delegation
 
-Role: `<worker | reviewer>`
-Capability tier: `<junior | senior | expert | None for reviewer>`
-Access: `<read-only | write>`
+Role: `<explorer | worker | reviewer>`
+Capability tier: `<None for explorer/reviewer | junior | senior | expert for worker>`
+Access: `<read-only for explorer/reviewer | read-only | write for worker>`
 Work type: `<exploration | research | implementation | design | planning | analysis | review>`
 
 ## Required skill
@@ -166,15 +176,16 @@ Self-contained does not mean exhaustive. Pass the relevant shared contracts, the
 
 Retain the common Return fields, then add only the work-type-specific evidence:
 
-- **Exploration or research:** answer one explicit question; return exact paths, symbols, source versions, search coverage, and evidence limitations. A claim that no other caller, route, or reference exists must state the aliases and string forms searched.
+- **Exploration:** answer one explicit repository question. Locate, trace, map, enumerate, and cross-check as needed; return exact paths, symbols, relevant flow or relationship, search coverage, and evidence limitations. A claim that no other caller, consumer, route, bypass, registration, or reference exists must state the aliases and string forms searched. Explain what the current code does only to the extent supported by traced evidence; do not diagnose, redesign, decide correctness, or issue a review verdict.
+- **Research:** answer one explicit research question with source versions, evidence, and limitations; separate externally sourced facts from repository facts.
 - **Implementation:** return files changed, behavior delivered, tests added or updated, focused commands with observed results, and any scope expansion that was needed but not performed. The same subagent owns its local implementation and focused tests.
-- **Review, design, planning, or analysis:** return a direct verdict or recommendation, findings with triggers and evidence, and unresolved decisions. Scouts may locate evidence, but the reviewing or designing agent owns its judgment.
+- **Review, design, planning, or analysis:** return a direct verdict or recommendation, findings with triggers and evidence, and unresolved decisions. Explorers may locate evidence, but the reviewing, designing, planning, or analyzing agent owns its judgment.
 
-Do not change the selected capability tier merely because the work type changes during normal task-local execution. Reclassify only when newly discovered scope or risk materially changes the reasoning requirement; if that crosses the current agent's authority or safe capability boundary, return a blocker to the parent rather than silently spawning another agent.
+Do not change a worker capability tier merely because its work type changes during normal task-local execution. Reclassify only when newly discovered scope or risk materially changes the reasoning requirement. If an explorer discovers that the caller's real question requires diagnosis, design, or judgment, return the evidence gathered plus that boundary instead of silently answering beyond the explorer role. The parent may then dispatch a worker with the appropriate tier.
 
 ## Dispatch and collect
 
-1. Classify role, capability tier, access, and work type. Name the required domain skill or `None`; do not ask the subagent to guess.
+1. Classify role, capability tier, access, and work type. Enforce `explorer → None + read-only + exploration`, `reviewer → None + read-only + review`, and `worker → junior | senior | expert`. Name the required domain skill or `None`; do not ask the subagent to guess.
 2. Load the active host reference and apply its adapter. Put only the context needed for the bounded task in the contract.
 3. Dispatch ready work concurrently only when dependency outputs are stable, write ownership does not overlap, and no shared interface remains unsettled. A dependent task may be delegated serially after its predecessor is verified.
 4. Wait for every result in the current wave and verify its contract, actual edits, and focused checks before releasing dependent work.
