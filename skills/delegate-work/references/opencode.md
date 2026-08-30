@@ -6,17 +6,31 @@ Use this reference only when `delegate-work` is running under OpenCode. The comm
 
 OpenCode uses its built-in `Explore` subagent for the specialized explorer role and named custom subagents for tiered workers and review.
 
-| Route | OpenCode subagent |
-| --- | --- |
-| `explorer` | built-in `Explore` |
-| `junior` worker | `junior-worker` |
-| `senior` worker | `senior-worker` |
-| `expert` worker | `expert-worker` |
-| `reviewer` | `reviewer` |
+| Route | OpenCode subagent | Model |
+| --- | --- | --- |
+| `explorer` | built-in `Explore` | `opencode-go/deepseek-v4-flash#high` |
+| `junior` worker | `junior-worker` | `opencode-go/deepseek-v4-flash#high` |
+| `senior` worker | `senior-worker` | `opencode-go/deepseek-v4-pro#high` |
+| `expert` worker | `expert-worker` | `openai/gpt-5.6-sol#high` |
+| `reviewer` | `reviewer` | `openai/gpt-5.6-sol#high` |
 
-The custom agent definitions live in `platforms/opencode/agents/` in this repository and may be installed globally under `~/.config/opencode/agents/` or copied into a project's `.opencode/agents/` directory. No custom explorer definition is required.
+The custom agent definitions live in `platforms/opencode/agents/` in this repository and may be installed globally under `~/.config/opencode/agents/` or copied into a project's `.opencode/agents/` directory. Their checked-in frontmatter is the source of truth for worker and reviewer model selection.
 
-Do not bind a concrete model to the built-in `Explore` route in this repository; OpenCode owns that subagent's model routing. Configure each custom worker or reviewer agent's `model` locally to match the available providers and plans. Do not encode Codex, Kimi, GLM, or other provider names into the cross-platform task contract.
+No custom explorer definition is required. Override the built-in `Explore` model in OpenCode configuration:
+
+```jsonc
+{
+  "agent": {
+    "explore": {
+      "model": "opencode-go/deepseek-v4-flash#high"
+    }
+  }
+}
+```
+
+`opencode-go` requires an active OpenCode Go connection. The `openai/gpt-5.6-sol#high` routes assume OpenAI is connected through OpenCode's OpenAI provider, including ChatGPT Plus/Pro OAuth where available.
+
+These concrete provider and model choices are platform-adapter details. Do not encode OpenCode Go, OpenAI, Codex, or model names into the cross-platform task contract, plans, or task DAGs.
 
 ## Permissions
 
