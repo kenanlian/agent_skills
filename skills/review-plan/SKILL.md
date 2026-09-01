@@ -1,6 +1,6 @@
 ---
 name: review-plan
-description: Review a saved implementation plan for requirement coverage, source grounding, decision completeness, work-package DAG safety, and verifiable acceptance criteria. Use before execution after the user selects plan review; remain advisory and read-only.
+description: Review a saved implementation plan for requirement coverage, source grounding, decision completeness, work-package DAG safety, and verifiable acceptance criteria. In persisted review cycles, write the full raw review directly to the caller-provided audit artifact and return only a compact control result.
 ---
 
 # Review plan
@@ -9,11 +9,20 @@ Determine whether the saved plan carries a fresh implementer from current reposi
 
 ## Inputs and authority
 
-`Plan File` is required. Read the complete file yourself; never review a summary or reconstruct a missing plan from conversation, code, or a diff. Review against the current workspace unless the caller names another repository. `Scope` may narrow plan sections and `Custom Instructions` may add explicit constraints. The caller should provide `Review Round` from 1 through 3 when this invocation belongs to a persisted cycle. If it provides a value above 3, stop without reviewing and report that the cycle requires user direction. If omitted, perform one review and never initiate a rerun yourself.
+`Plan File` is required. Read the complete file yourself; never review a summary or reconstruct a missing plan from conversation, code, or a diff. In a persisted cycle the caller should pass the immutable per-round plan snapshot rather than the mutable live plan.
 
-If the file is missing or unreadable, stop and ask for the exact path. Remain advisory: do not edit the plan or code, run tests or builds, persist review artifacts, or trigger state-changing commands. The caller owns review persistence and adjudication. Judge whether the selected design is executable; do not replace a workable design merely because another is preferable. Use `review-patch` for implementation defects.
+Optional inputs:
 
-The reviewing agent owns every severity and the final verdict. Scouts locate and trace evidence but never decide whether the plan passes.
+- `Scope`: narrowed plan sections.
+- `Custom Instructions`: explicit additional constraints.
+- `Review Run ID` and `Review Round`: persisted-cycle identity; round must be 1 through 3.
+- `Raw Review Artifact`: exact path where this reviewer must write its complete immutable report.
+
+If `Review Round` is above 3, stop without reviewing and report that the cycle requires user direction. If the plan is missing or unreadable, stop and ask for the exact path.
+
+Remain source-read-only: do not edit the plan, product code, tests, configuration, or any other workspace file; do not run builds/tests or state-changing commands. When `Raw Review Artifact` is provided, you have exclusive write authority only for that one new audit file. Do not write any other audit file, manifest, snapshot, or adjudication. The caller owns adjudication and live-plan revision.
+
+The reviewing agent owns every severity and the raw verdict. Explorers locate and trace evidence but never decide whether the plan passes.
 
 ## Build the coverage model
 
@@ -21,70 +30,57 @@ Extract the plan into four sets:
 
 - `R*`: requested outcomes;
 - `C*`: observable behavior, invariants, prohibitions, and shared interfaces;
-- `WP-*`: bounded work packages and their dependencies; and
+- `WP-*`: bounded work packages and dependencies;
 - `V*`: focused, integration, and end-to-end verification.
 
-Build an `R → C → WP → V` coverage matrix. A missing edge is blocking when it leaves an outcome unimplemented, an unauthorized package unexplained, or behavior unverifiable.
+Build an `R → C → WP → V` coverage matrix. A missing edge is blocking when it leaves an outcome unimplemented, an unauthorized package unexplained, or material behavior unverifiable.
 
-## Apply a materiality gate
+## Apply the materiality gate
 
-Report a P0–P2 plan defect only when leaving it unresolved would create at least one of these conditions:
+Report a P0–P2 defect only when leaving it unresolved would create at least one of these conditions:
 
 - the executor must choose among reasonable options that change observable behavior, a public interface, data, security, compatibility, failure semantics, rollout, or a cross-package boundary;
 - two plan instructions cannot be satisfied together;
-- a work package cannot complete within its dependencies, authority, ownership, or stated verification conditions;
-- a requested outcome has no implementation path or no credible proof path;
+- a work package cannot complete within its dependencies, authority, ownership, or verification conditions;
+- a requested outcome has no implementation path or credible proof path;
 - an omitted producer, consumer, state transition, or failure route makes a wrong implementation likely; or
 - execution could cause significant user, security, data, compatibility, reliability, or irreversible harm.
 
-Do not report a fact merely because it is imprecise. Wrong line numbers, local imports, helper placement, exact test counts, non-load-bearing wording, ordinary source lookup, and locally discoverable implementation details are not findings unless the error changes what must be built, who owns it, the order of work, or whether a material contract can be verified. A P3 advisory may describe a real reachable low-impact risk, but not precision, style, or maintainability polish. Do not turn a preferable design into a required revision.
+Wrong line numbers, local imports, helper placement, exact test counts, non-load-bearing wording, and ordinary source lookup are not findings unless the error changes what must be built, who owns it, ordering, or whether a material contract can be verified. P3 is only for a real reachable low-impact correctness risk, not style or preferred design.
 
 ## Review in two passes
 
 ### 1. Internal executability
 
-Check the plan itself for:
-
-- consistent scope, terminology, contracts, load-bearing literals, and assumptions;
-- settled product, architecture, interface, data, security, compatibility, and rollout decisions;
-- executable entry points, correct ordering, explicit dependencies, and clear done conditions;
-- bounded work-package goals, sufficient task-local context, and focused verification;
-- stable predecessor outputs and explicit successor handoffs;
-- non-overlapping ownership for parallel writes and no shared interface decided concurrently;
-- explicit main ownership of cross-package decisions, integration, and final verification; and
-- contingencies that prescribe an action instead of deferring a load-bearing choice.
-
-Flag under-splitting or over-splitting only when it creates an unresolved decision, overlapping authority, unstable handoff, or unsafe schedule. Package size or local navigation cost alone is not a finding.
+Check scope, terminology, contracts, assumptions, settled decisions, executable entry points, ordering, dependencies, work-package bounds, focused verification, predecessor outputs, successor handoffs, parallel ownership, main-owned integration, and contingencies. Flag package size or splitting only when it creates an unresolved decision, overlapping authority, unstable handoff, or unsafe schedule.
 
 ### 2. Repository and risk grounding
 
-Verify repository claims that are load-bearing for behavior, interfaces, ownership, ordering, risk, or verification. Distinguish preconditions from artifacts created by earlier packages. Search aliases, string forms, registrations, serialization, configuration, and dynamic entry points before accepting an exhaustive or negative claim. Record minor anchor drift in evidence when useful, but do not promote it to a finding unless it passes the materiality gate.
+Verify repository claims that are load-bearing for behavior, interfaces, ownership, ordering, risk, or verification. Search aliases, string forms, registrations, serialization, configuration, and dynamic entry points before accepting an exhaustive or negative claim.
 
-Apply the relevant risk sweeps:
+Apply relevant sweeps:
 
-- **Interface closure:** producers, consumers, wire formats, clients, mocks, fixtures, docs, and removals.
-- **State and failure:** partial success, retry, repetition, concurrency, cancellation, timeout, cleanup, restart, empty/missing/conflict states, and transaction boundaries.
-- **Security:** authentication, authorization, tenant isolation, input validation, secrets, logs, and bypass routes.
-- **Data and rollout:** migrations, backfill, mixed versions, deployment order, defaults, feature flags, observability, rollback, and irreversible operations.
-- **Verification quality:** a concrete oracle for new and negative behavior, commands with prerequisites, and tests that would fail for a plausible defect rather than merely build.
-- **Freshness:** plan commit and task-relevant dirty state still match; classify changed anchors as material drift rather than silently approving stale instructions.
+- **Interface closure:** producers, consumers, wire formats, clients, mocks, fixtures, docs, removals.
+- **State and failure:** partial success, retry, repetition, concurrency, cancellation, timeout, cleanup, restart, empty/missing/conflict states, transactions.
+- **Security:** authentication, authorization, tenant isolation, validation, secrets, logs, bypasses.
+- **Data and rollout:** migrations, backfill, mixed versions, deployment order, defaults, flags, observability, rollback, irreversible operations.
+- **Verification quality:** concrete oracle, prerequisites, negative behavior, tests that would fail for a plausible defect.
+- **Freshness:** plan baseline and task-relevant workspace state; classify material drift rather than silently approving stale instructions.
 
 ## Delegate evidence collection
 
-After the coverage model identifies independent questions, follow `delegate-work` for bounded read-only scouts. Partition by one interface trace, risk sweep, verification path, or ownership check. Require exact evidence and search coverage; do not ask a scout to review the entire plan or issue the verdict.
-
-Confirm every blocking finding, every “no other route exists” claim, and every delegated negative result yourself. Resume an unusable scout rather than replacing it.
+After identifying independent evidence questions, follow `delegate-work` with bounded read-only explorers. Partition by one interface trace, risk sweep, verification path, or ownership check. Confirm every blocking finding, every “no other route exists” claim, and every delegated negative result yourself.
 
 ## Severity, category, and verdict
 
-Assign one severity to every finding:
+Use:
 
-- `P0`: execution can cause release-blocking, severe security/data, or broadly irreversible harm;
-- `P1`: a missing or false load-bearing decision, interface, dependency, baseline, or verification path makes execution unsafe or likely wrong;
-- `P2`: a reachable, material edge case, integration path, work-package boundary, or proof gap can produce wrong user-visible or broadly consequential results;
-- `P3`: a real but low-impact clarity or correctness risk that does not block safe execution and requires no new load-bearing decision.
+- `P0`: release-blocking, severe security/data, or broadly irreversible harm.
+- `P1`: missing or false load-bearing decision, interface, dependency, baseline, or proof path that makes execution unsafe or likely wrong.
+- `P2`: reachable material edge case, integration path, work-package boundary, or proof gap.
+- `P3`: reachable low-impact correctness risk that does not block safe execution.
 
-Assign exactly one category to every finding from this stable taxonomy:
+Assign exactly one category:
 
 - `requirement-coverage`
 - `source-grounding`
@@ -98,21 +94,64 @@ Assign exactly one category to every finding from this stable taxonomy:
 - `security-data`
 - `baseline-drift`
 
-Choose the category that best identifies the plan-quality failure that must be corrected, not every downstream area it could affect.
+Give findings stable report-local IDs `PR-01`, `PR-02`, ... . Return raw verdict `REVISE` when any P0–P2 gap prevents decision-complete execution or credible proof; otherwise return `APPROVE`. P3 alone does not block approval.
 
-Give findings stable IDs in report order: `PR-01`, `PR-02`, and so on. IDs are report-local and need only remain stable within this review invocation; the caller may persist them for later adjudication.
+## Full raw report
 
-Return `REVISE` when any `P0`–`P2` gap prevents decision-complete execution or credible proof of a material promised behavior. Return `APPROVE` when the requested material scope is covered and current repository evidence supports execution. `P3` alone is non-blocking and must not change an `APPROVE` verdict.
+The complete report contains:
 
-## Output
+1. `APPROVE` or `REVISE`, 1–3 sentence summary, confidence 0.0–1.0.
+2. **Coverage matrix:** one compact row per material `R*`/`C*`, naming `WP-*`, `V*`, and `covered`/`missing`.
+3. **Required revisions:** every P0–P2 finding, earliest dependency failure first, with `PR-*`, severity, category, missing/false contract, repository evidence, impact, exact decision/information needed, and concrete suggestion.
+4. **Non-blocking risks:** at most two useful P3 findings.
+5. **Evidence checked:** source anchors, exhaustive searches, verification criteria, baseline result, and delegated evidence used.
 
-Start with `APPROVE` or `REVISE`, a 1–3 sentence summary, and confidence from 0.0 to 1.0.
+If material coverage is incomplete because required evidence is unavailable, return `REVISE` and identify the uncovered area. Missing non-load-bearing detail does not force revision.
 
-Then provide:
+## Persisted-cycle output protocol
 
-- **Coverage matrix:** one compact row per `R*`/`C*`, naming its `WP-*`, `V*`, and `covered` or `missing` status.
-- **Required revisions:** omit when approving. Group by plan section or package, earliest dependency failure first. For each `P0`–`P2` finding, give its `PR-*` ID, severity, category, missing or false contract, repository evidence, execution or verification impact, exact decision/information needed, and a concrete `Suggestion:` that can be inserted into the existing design.
-- **Non-blocking risks:** optionally include at most two `P3` findings when they describe a real reachable risk rather than precision, style, or maintainability polish. Give each its `PR-*` ID, category, concise evidence, impact, and suggestion.
-- **Evidence checked:** source anchors, exhaustive searches, verification criteria, baseline result, and which items used scout evidence.
+When `Raw Review Artifact` is supplied:
 
-Do not hide incomplete material coverage behind a partial approval. If a material plan section or risk partition could not be reviewed, return `REVISE`, identify the uncovered area, and explain what evidence is missing. Missing evidence about non-load-bearing details does not force revision.
+1. Complete the review first.
+2. Write the full raw report directly to that exact path before returning. The artifact is immutable after return.
+3. Include provenance frontmatter so later audit can distinguish the reviewed input and reviewer environment:
+
+```markdown
+---
+review_run_id: <provided review-run-id>
+round: <N>
+reviewed_plan: <exact Plan File>
+repository_head: <sha>
+reviewer_skill_version: <reported revision or unknown>
+reviewer_model: <host-reported identifier or unknown>
+reviewer_reasoning: <host-reported value or unknown>
+started: <timestamp>
+completed: <timestamp>
+verdict: <APPROVE | REVISE>
+confidence: <0.0-1.0>
+---
+
+# Raw plan review
+
+<complete raw report>
+```
+
+Do not return the complete report to the parent after it has been persisted. Return only this compact control result:
+
+```text
+Outcome: review completed
+Verdict: <APPROVE | REVISE>
+Confidence: <0.0-1.0>
+Artifact: <Raw Review Artifact>
+Findings:
+- PR-01 | <P0-P3> | <category> | <one-line summary>
+- ...
+Coverage summary: <covered N; missing N; unverifiable N>
+Evidence limitations: <one-line summary or None>
+```
+
+The compact finding index must include every reported P0–P3 finding so the caller can adjudicate without loading the full coverage matrix. Keep each summary to one line; evidence and suggestions remain in the artifact and are read on demand.
+
+If the artifact write fails, report the persistence failure and do not claim the review round completed. Do not send the full report merely so the caller can persist it for you.
+
+When `Raw Review Artifact` is not supplied, behave as a standalone advisory reviewer and return the full raw report normally; do not create audit files on your own.
