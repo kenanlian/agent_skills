@@ -1,28 +1,43 @@
 ---
 name: review-plan-conformance
-description: Verify that a code patch delivers the behavior promised by a saved implementation plan. Use after implementation when a plan file exists; remain read-only and review conformance rather than general patch quality.
+description: Verify that an implementation delivers the behavior promised by a saved plan. In persisted review cycles, write the full raw conformance report directly to the caller-provided audit artifact and return only a compact control result.
 ---
 
 # Review plan conformance
 
-Determine whether a patch delivers the behavior its plan promised. Judge intent, not wording: a plan is implemented when the system now behaves as promised, regardless of the internal names and structures used.
+Determine whether an implementation delivers the behavior its plan promised. Judge intent, not wording: a plan is implemented when the system now behaves as promised, regardless of internal names and structures used.
 
-## Inputs
+## Inputs and authority
 
-`Plan File` is required. Review the current workspace and uncommitted changes unless the caller names a different repository or diff range. `Scope` may narrow the reviewed plan sections and `Custom Instructions` may add constraints. The caller should provide `Review Round` from 1 through 3 when this invocation belongs to a persisted cycle. If it provides a value above 3, stop without reviewing and report that the cycle requires user direction. If omitted, perform one review and never initiate a rerun yourself. If the plan is missing or unreadable, stop and ask for it. Never substitute an inferred plan.
+`Plan File` is required. Review the current workspace and uncommitted changes unless the caller names a different repository or diff range. Optional inputs:
+
+- `Scope`
+- `Custom Instructions`
+- `Execution ID`
+- `Review Round` from 1 through 3
+- `Review Scope`: `workspace | commit-range | workspace-and-commits`
+- `Reviewed Head`
+- `Diff Base`
+- `Diff Head`
+- `Raw Review Artifact`: exact path for the immutable full report
+
+If `Review Round` is above 3, stop without reviewing and report that the cycle requires user direction. If the plan is missing or unreadable, stop and ask for it. Never substitute an inferred plan.
+
+Remain source-read-only: do not edit implementation files, tests, configuration, or the plan; do not run builds/tests or state-changing commands. When `Raw Review Artifact` is provided, you have exclusive write authority only for that one new audit file. Do not update manifests, execution state, adjudication, or any other audit artifact. The caller owns persistence outside the raw report, adjudication, fixes, and reruns.
 
 ## Scope
 
-Review conformance between plan and implementation. Use `review-patch` to hunt for defects the plan never addressed and `review-plan` to judge the plan itself. Do not implement or repair anything.
+Review conformance between plan and implementation. Use `review-patch` to hunt defects the plan never addressed and `review-plan` to judge the plan itself. Do not implement or repair anything.
 
 ## Normalize the plan
 
 Read the complete plan, then restate its material promises as behavioral contracts: observable behaviors, safety/data/compatibility properties, failure semantics, prohibitions, public interfaces, and responsibility boundaries.
 
-- Harvest a statement from context, rationale, assumptions, or contingencies only when it constrains a material observable result or responsibility boundary. Explanatory reasoning, bookkeeping, source anchors, exact test counts, and local implementation suggestions are not contracts.
+- Harvest rationale, assumptions, or contingencies only when they constrain a material observable result or responsibility boundary.
+- Explanatory reasoning, bookkeeping, source anchors, exact test counts, and local implementation suggestions are not contracts.
 - Treat literal names, signatures, fields, deletion lists, and ownership instructions as means unless a user-facing/public interface, compatibility rule, prohibited path, or cross-package responsibility depends on them.
 - Record each contract's plan section and ordered dependencies.
-- Preserve an existing contract identifier from the plan when one exists. Otherwise assign a stable report-local identifier in plan order (`PC-01`, `PC-02`, and so on) and reuse it throughout this review run.
+- Preserve an existing contract identifier from the plan when one exists. Otherwise assign stable report-local IDs `PC-01`, `PC-02`, ... in plan order.
 
 ## Procedure
 
@@ -30,26 +45,24 @@ Read the complete plan, then restate its material promises as behavioral contrac
 2. Read the diff to map what changed, then compare the checklist with current code rather than merely matching diff text.
 3. Verify each contract by behavior, including the negative path and a test that would fail on a plausible material regression when applicable.
 4. For prohibitions, enumerate every call site or route that could still produce the forbidden effect.
-5. Once the checklist and diff map exist, use `delegate-work` for independent read-only behavioral traces and bypass sweeps when that materially improves coverage.
-6. Verify plan-mandated tests exist and assert the material contract. Do not run them. The review role's prohibition on running tests is not itself a conformance gap.
+5. Use `delegate-work` for independent read-only behavioral traces and bypass sweeps when that materially improves coverage.
+6. Verify plan-mandated tests exist and assert the material contract. Do not run them; this reviewer is read-only.
 7. Sweep the diff for changes no contract explains and list them without judging correctness.
 8. Report the earliest blocking violation first and mark downstream consequences.
-9. Do not edit files, run builds or tests, persist review artifacts, or trigger state-changing commands. The caller owns review persistence and adjudication.
+9. Confirm every `violated` status and every bypass-free claim yourself; explorers supply evidence but never own status or verdict.
 
 ## Evidence standard
 
-A matching symbol or diff mention does not prove conformance. Each satisfied contract needs behavioral evidence: a code path, the negative-case branch, or a regression test. Exact internal structure is unnecessary when current behavior proves the promise.
+A matching symbol or diff mention does not prove conformance. Each satisfied contract needs behavioral evidence: a code path, negative-case branch, or regression test. Exact internal structure is unnecessary when current behavior proves the promise.
 
 Assign exactly one status per contract:
 
 - `satisfied`: behavior present, with evidence
 - `violated`: behavior absent, incomplete, or reachable by a forbidden route
 - `satisfied-differently`: behavior present through means the plan did not describe
-- `unverifiable`: confirmation requires runtime, hardware, or external services
+- `unverifiable`: confirmation requires runtime, hardware, external services, or human evidence genuinely unavailable to this review
 
-Confirm every `violated` status and every bypass-free claim with your own search, including alias and string forms. Absence is easy to misjudge. Do not mark a contract violated for a missing regression test unless a concrete material defect could plausibly escape all other evidence and the plan made that protection part of the promised result.
-
-For every `violated` contract, assign exactly one violation type from this stable taxonomy:
+For every `violated` contract assign exactly one violation type:
 
 - `missing-implementation`
 - `partial-implementation`
@@ -60,27 +73,79 @@ For every `violated` contract, assign exactly one violation type from this stabl
 - `responsibility-boundary`
 - `compatibility-migration`
 
-Choose the type that best describes the primary conformance failure. Do not assign a violation type to contracts with any other status.
+Do not assign a violation type to other statuses.
 
-## Delegation
+## Verdict
 
-Scouts locate and trace; the reviewing agent judges every status and owns the verdict.
+Use:
 
-- Give each scout one behavioral question or bypass sweep using the full task contract from `delegate-work`.
-- Run only independent, non-overlapping partitions concurrently and wait for every required result.
-- Never record `violated` or “no bypass exists” from scout evidence alone.
-- If a scout result is unusable, resume it with the missing return requirements or verify that partition directly.
+- `CONFORMS`: no material violated contract and material coverage is assessable.
+- `DIVERGES`: at least one material contract is violated.
+- `INCOMPLETE`: a material contract genuinely cannot be assessed because necessary runtime, hardware, external-service, or human evidence is unavailable.
 
-## Output
+Do not use `INCOMPLETE` merely because this read-only reviewer did not rerun automated checks.
 
-Start with `CONFORMS`, `DIVERGES`, or `INCOMPLETE`, a 1–3 sentence explanation, and confidence from 0.0 to 1.0. Use `DIVERGES` for a material violated contract. Use `INCOMPLETE` only when a material contract cannot be assessed because necessary runtime, hardware, external-service, or human evidence is genuinely unavailable; do not use it merely because this read-only reviewer did not rerun automated checks.
+## Full raw report
 
-Then provide:
+The complete report contains:
 
-- Coverage: per plan section, counts by status, and any unreviewed section.
-- Contract results: for each contract, give its stable ID, plan section, status, and concise behavioral evidence.
-- Violations: grouped by plan section, earliest blocking one first. Give the contract ID, violation type, promised behavior, actual behavior and evidence, impact, and one remedy.
-- Accepted deviations: one line for each `satisfied-differently` contract, keyed by contract ID.
-- Out-of-plan changes: changes no contract explains, listed without judging them.
+1. `CONFORMS`, `DIVERGES`, or `INCOMPLETE`, 1–3 sentence explanation, confidence 0.0–1.0.
+2. **Coverage:** counts by status per plan section and any unreviewed section.
+3. **Contract results:** every material contract with stable ID, plan section, status, and concise behavioral evidence.
+4. **Violations:** every violated contract, earliest blocking first, with contract ID, violation type, promised behavior, actual behavior/evidence, impact, and one remedy.
+5. **Accepted deviations:** every `satisfied-differently` contract.
+6. **Out-of-plan changes:** changes no contract explains, listed without judging correctness.
+7. Delegated evidence used and evidence limitations.
 
-State which contracts relied on delegated scout evidence. If coverage is incomplete, name the uncovered sections rather than presenting a partial review as complete. Callers may persist and aggregate the stable IDs, statuses, and violation types across review runs.
+Preserve the full contract coverage table in the raw artifact even though only violations need to return to the parent control plane.
+
+## Persisted-cycle output protocol
+
+When `Raw Review Artifact` is supplied:
+
+1. Complete the review.
+2. Write the entire raw report directly to that exact path before returning. The artifact becomes immutable after return.
+3. Include provenance frontmatter:
+
+```markdown
+---
+execution_id: <provided execution id>
+round: <N>
+reviewer: review-plan-conformance
+reviewed_head: <sha>
+review_scope: <workspace | commit-range | workspace-and-commits>
+diff_base: <sha/ref or null>
+diff_head: <sha/ref or WORKTREE>
+reviewer_skill_sha256: <digest or unknown>
+reviewer_model: <host-reported identifier or unknown>
+reviewer_reasoning: <host-reported value or unknown>
+started: <timestamp>
+completed: <timestamp>
+verdict: <CONFORMS | DIVERGES | INCOMPLETE>
+confidence: <0.0-1.0>
+---
+
+# Raw plan conformance review
+
+<complete raw report>
+```
+
+Do not return the full coverage table after it has been persisted. Return only:
+
+```text
+Outcome: review completed
+Verdict: <CONFORMS | DIVERGES | INCOMPLETE>
+Confidence: <0.0-1.0>
+Artifact: <Raw Review Artifact>
+Violations:
+- <contract-id> | <violation type> | <one-line summary>
+- ...
+Coverage summary: <satisfied N; satisfied-differently N; violated N; unverifiable N>
+Evidence limitations: <one-line summary or None>
+```
+
+The compact violation index must include every `violated` contract. Do not return satisfied-contract evidence to the parent; it remains in the artifact for audit and on-demand reads.
+
+If the raw artifact write fails, report the persistence failure and do not claim the round completed. Do not send the full report merely so the caller can persist it for you.
+
+When `Raw Review Artifact` is not supplied, behave as a standalone advisory reviewer and return the full report normally; do not create audit files.
