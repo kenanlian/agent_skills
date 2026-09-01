@@ -31,6 +31,8 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 其中 explorer 专门负责代码库事实发现：定位、追踪、映射、穷举和交叉验证文件、symbol、caller、consumer、route、test、registration、state/data flow 等证据。搜索范围可以很广甚至 exhaustive，但 explorer 不负责 root-cause、架构/设计选择、正确性判断或 review verdict。需要工程判断时使用相应 tier 的 worker，需要独立审查结论时使用 reviewer。
 
+Reviewer 可以继续委派 bounded read-only explorer 做代码探索和证据收集，例如 caller/consumer closure、behavior trace、bypass sweep、negative search 和 verification-path discovery；但 finding 是否成立、severity、contract status 和最终 verdict 必须由 reviewer 自己判断，不能继续下放。
+
 `audit-write` 不是一般写权限。reviewer 的源码、计划、实现、测试和配置仍然只读，只允许写调用方明确指定的单个 raw review artifact；manifest、execution state、adjudication 和修复仍由父流程负责。
 
 `exploration` work type 固定路由到 explorer；worker 的 tier 决定所需推理能力；review 固定路由到 reviewer。各宿主 adapter 再把这些稳定语义映射为宿主原生 subagent。计划和任务 DAG 不应绑定具体模型。
@@ -61,7 +63,7 @@ reviewer       -> reviewer
 ~/.config/opencode/agents/reviewer.md
 ```
 
-因此调整模型时只需要修改 OpenCode/dotfiles 配置，不需要修改 `agent_skills`。三个 worker 必须禁止继续启动嵌套 subagent；reviewer 也必须禁止嵌套 subagent，并保持源码只读。若使用持久化审查，OpenCode 的 reviewer 配置还需要支持对 task contract 中唯一 raw-review artifact 路径的窄写权限。
+因此调整模型时只需要修改 OpenCode/dotfiles 配置，不需要修改 `agent_skills`。三个 worker 必须禁止继续启动嵌套 subagent；reviewer 则需要保留 task delegation，用于委派只读 explorer 进行证据收集，同时自己保留所有 review judgment。若使用持久化审查，OpenCode 的 reviewer 配置还需要支持对 task contract 中唯一 raw-review artifact 路径的窄写权限。
 
 ## 计划工作流
 
