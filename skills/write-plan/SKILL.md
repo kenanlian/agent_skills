@@ -10,21 +10,19 @@ disable-model-invocation: true
 Plan-writing mode is active.
 
 - Before plan review begins, the ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
-- If the user selects plan review, you may additionally create and update only that review run's audit artifacts under `.dev/plan-review/<review-run-id>/` as specified below. No other working-tree file may be changed.
+- If the user selects plan review, audit artifacts may additionally be created or updated only under that review run's `.dev/plan-review/<review-run-id>/` directory.
 - Never create, edit, delete, or rename any other working-tree file.
-- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Read-only shell commands and genuinely non-mutating checks are allowed.
+- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Deterministic audit-persistence commands that only touch the authorized review directory are allowed after review is selected.
 - Never delete or rename an existing plan file or prior review artifact.
 - Never implement the plan in this session. Execution happens later in a fresh session that starts from the saved plan.
-- Never ask for implementation approval. The optional plan-review choice described below is a quality gate, not implementation approval.
+- Never ask for implementation approval. Plan review is a quality gate, not implementation approval.
 </critical>
 
 ## Write an execution specification
 
 The plan is the semantic source of truth for a fresh implementer that may have none of the originating conversation. It must settle every product, behavior, architecture, interface, data, compatibility, security, and rollout decision that implementation depends on. Local implementation choices and ordinary repository navigation remain free when they cannot change an observable contract or cross-work-package boundary.
 
-Self-contained does not mean copying the repository or eliminating every source lookup. Record every load-bearing decision and the repository path, symbol, interface, or command needed to act on it. Use exact line numbers, counts, and local helper locations only when they determine behavior, ownership, ordering, drift, or whether verification is executable. Name a required skill only as an execution dependency for how to work. Never substitute “follow the skill” for behavior, failure, compatibility, or verification requirements.
-
-Detail exists to remove decisions, not to add ceremony. Cut narration, generic risks, alternatives already rejected, unaffected behavior, and repeated mechanical edits.
+Self-contained does not mean copying the repository. Record every load-bearing decision and the repository path, symbol, interface, or command needed to act on it. Use exact line numbers, counts, and helper locations only when they determine behavior, ownership, ordering, drift, or whether verification is executable. Detail exists to remove decisions, not to add ceremony.
 
 ## Select the plan file
 
@@ -34,21 +32,21 @@ Plans live in `.dev/plan/` at the repository root. List that directory before wr
 - Otherwise choose a short lowercase kebab-case slug and create `.dev/plan/<slug>-plan.md`.
 - Leave plans for other tasks untouched. The stable filename is the execution entry point and persists across revisions.
 
-Use incremental edits and structure the document with `##` and `###` sections. Write grounded findings as they become stable instead of batching the entire document at the end. Keep the plan free of progress checkboxes, execution status, and review banners.
+Use incremental edits. Keep the plan free of progress checkboxes, execution status, and review banners.
 
 ## Ground facts with bounded exploration
 
-Discover repository facts instead of asking the user. Read every file whose current behavior, interface, convention, or verification path is load-bearing. Ground every stated load-bearing path, symbol, signature, caller, schema, command, and existing behavior in evidence inspected in this session. Do not expand the plan to inventory locally discoverable details that cannot affect the implementation decision or result.
+Discover repository facts instead of asking the user. Read every file whose current behavior, interface, convention, or verification path is load-bearing. Ground every stated load-bearing path, symbol, signature, caller, schema, command, and existing behavior in evidence inspected in this session.
 
-For a task with more than one independent evidence question or more than one affected subsystem, follow `delegate-work` and use read-only subagents in waves:
+For a task with more than one independent evidence question or more than one affected subsystem, follow `delegate-work` and use read-only explorers in waves:
 
-1. **Map in parallel.** Give scouts non-overlapping questions covering current behavior and call paths, consumers and public interfaces, tests and repository conventions, plus task-relevant data, security, compatibility, or rollout concerns.
-2. **Close gaps.** Synthesize compact evidence, then dispatch focused follow-ups only for unresolved load-bearing claims. Resume the same scout when its existing local context is useful.
-3. **Challenge the draft.** Before finalization, use an independent read-only critic for large or cross-cutting plans to search for omitted material consumers, unsupported load-bearing facts, missing failure behavior, acceptance criteria that cannot catch a plausible material defect, and unsafe work-package boundaries.
+1. **Map in parallel.** Give explorers non-overlapping questions covering current behavior and call paths, consumers and public interfaces, tests and repository conventions, plus task-relevant data, security, compatibility, or rollout concerns.
+2. **Close gaps.** Synthesize compact evidence, then dispatch focused follow-ups only for unresolved load-bearing claims. Resume the same explorer when its existing context is useful.
+3. **Challenge the draft.** Before finalization, use an independent read-only critic for large or cross-cutting plans to search for omitted material consumers, unsupported load-bearing facts, missing failure behavior, weak acceptance criteria, and unsafe work-package boundaries.
 
-The main agent is the only plan writer and owns every design decision. Verify public interfaces, data and security boundaries, state machines, negative searches, and cross-work-package dependencies directly before relying on scout summaries.
+The main planning agent is the only live-plan writer and owns every design decision. Verify public interfaces, data and security boundaries, state machines, negative searches, and cross-work-package dependencies directly before relying on delegated summaries.
 
-If an external fact cannot be confirmed, mark it `unverified` and provide a pre-decided executable contingency. Never leave a load-bearing choice for the implementer. Ask the user only for preferences or tradeoffs that repository exploration cannot settle, and batch only questions that materially change the plan.
+If an external fact cannot be confirmed, mark it `unverified` and provide a pre-decided executable contingency. Ask the user only for preferences or tradeoffs that repository exploration cannot settle.
 
 ## Design a model-independent work graph
 
@@ -61,19 +59,19 @@ Assign stable IDs:
 
 Every requirement must map through at least one contract and work package to verification. Every work package must map back to an authorized requirement. The plan names capability roles and delegation policy, never a concrete model.
 
-A work package is bounded only when it has one decidable goal, stable inputs, explicit ownership, no unresolved cross-package decision, and focused verification. Split a package that needs unrelated subsystems or too much task-local context. Do not split one closed behavior into tiny layer-based edits that force several agents to coordinate a single interface.
+A work package is bounded only when it has one decidable goal, stable inputs, explicit ownership, no unresolved cross-package decision, and focused verification. Express dependencies as a DAG. Mark why a node is serial, which ready nodes are parallel-safe, and which verified predecessor output a successor consumes.
 
-Express dependencies as a DAG. Mark why a node is serial, which ready nodes are parallel-safe, and which verified output a successor consumes. For `Delegation`, use exactly one value:
+For `Delegation`, use exactly one value:
 
 - `preferred`: a closed package that should normally run in a subagent, even if serial;
 - `allowed`: small work whose dispatch cost may exceed direct execution; or
 - `main-required`: shared-contract decisions, cross-package integration, or final verification that require the coordinating agent.
 
-Parallel write packages must have exclusive, non-overlapping ownership and stable shared interfaces. Put implementation and its focused tests in the same package. Make integration and end-to-end verification explicit main-owned packages rather than leaving them implicit.
+Parallel write packages must have exclusive, non-overlapping ownership and stable shared interfaces. Put implementation and its focused tests in the same package. Make integration and end-to-end verification explicit main-owned packages.
 
 ## Plan contents
 
-Open with a `#` title, then use these sections:
+Open with a `#` title, then use these sections.
 
 ### Context
 
@@ -81,15 +79,15 @@ Restate the literal request, why it is needed, and the intended end state in 2�
 
 ### Baseline
 
-Record the repository root, current commit, task-relevant dirty files or diffs, dependency/config versions that materially constrain the task, and the anchors the executor must use to classify material drift. Unrelated dirty work remains user-owned.
+Record repository root, current commit, task-relevant dirty files or diffs, dependency/config versions that materially constrain the task, and the anchors the executor must use to classify material drift. Unrelated dirty work remains user-owned.
 
 ### Requirements & behavioral contracts
 
-List the `R*` requirements and `C*` contracts. Give exact externally visible literals, signatures, fields, precedence, compatibility, permissions, state transitions, or error behavior only when they are load-bearing. Include applicable empty, missing, conflict, repeated, concurrent, cancellation, cleanup, and failure behavior.
+List the `R*` requirements and `C*` contracts. Give exact externally visible literals, signatures, fields, precedence, compatibility, permissions, state transitions, and error behavior only when load-bearing. Include applicable empty, missing, conflict, repeated, concurrent, cancellation, cleanup, and failure behavior.
 
 ### Work-package DAG
 
-Show the dependency graph or a compact dependency table. State serial reasons, parallel-safe groups, and the verified predecessor outputs that unlock successors.
+Show the dependency graph or a compact dependency table. State serial reasons, parallel-safe groups, and verified predecessor outputs that unlock successors.
 
 ### Work packages
 
@@ -98,14 +96,14 @@ For every `WP-*`, state:
 - **Goal and contracts:** one observable result and the `R*`/`C*` IDs it delivers.
 - **Dependencies and scheduling:** predecessors, serial reason, parallel-safe peers, and `Delegation` value.
 - **Authority and ownership:** allowed files/modules, excluded scope, decisions it may not make, and required domain skill or `None`.
-- **Grounded implementation:** repository paths, symbols, and existing patterns needed to execute the package; concrete edits and exact public symbols or literals when load-bearing. For removals or contract changes, enumerate every material verified consumer or give the exhaustive search. Do not require exact line anchors for ordinary local edits.
+- **Grounded implementation:** repository paths, symbols, existing patterns, concrete edits, and exact public symbols or literals when load-bearing. For removals or contract changes, enumerate every material verified consumer or give the exhaustive search.
 - **Failure behavior:** applicable edge, error, cleanup, retry, compatibility, and rollback behavior.
-- **Focused verification:** `V*` cases with commands or observable checks that prove this package and would fail for a plausible defect.
-- **Handoff:** exact interfaces or artifacts made available to successor packages.
+- **Focused verification:** `V*` cases with commands or observable checks that prove the package and would fail for a plausible defect.
+- **Handoff:** exact interfaces or artifacts made available to successors.
 
 ### Integration & verification
 
-Map every `R*` and `C*` to its `WP-*` and `V*`. Give exact focused, integration, and end-to-end commands with working directory, environment, fixtures, inputs, expected outputs, and any manual reachability steps. Build or typecheck alone is never sufficient for new behavior.
+Map every `R*` and `C*` to its `WP-*` and `V*`. Give exact focused, integration, and end-to-end commands with working directory, environment, fixtures, inputs, expected outputs, and manual reachability steps when needed. Build or typecheck alone is never sufficient for new behavior.
 
 ### Assumptions & contingencies
 
@@ -122,42 +120,48 @@ Read the complete plan and apply these gates:
 - the main-owned integration path proves the combined behavior; and
 - a fresh implementer makes no undeclared load-bearing decision.
 
-The executor may still locate ordinary imports, adjacent tests, helpers, and mechanically affected fixtures. A plan is not incomplete merely because it omits facts that cannot change a behavioral contract, public interface, risk decision, or work-package boundary.
+After the plan is decision-complete, honor any review preference the user already stated. Otherwise ask whether to run `review-plan`. Recommend review for multiple affected subsystems, public interfaces, migrations or compatibility, authorization or security, billing or destructive behavior, concurrency, external side effects, rollout ordering, unverified external facts, or a large multi-package DAG. For a small low-risk change, recommend skipping while leaving the choice to the user.
 
-After the plan is decision-complete, honor any review preference the user already stated. Otherwise use the host's available user-input mechanism to ask whether to run `review-plan`, and recommend review when any of these apply: multiple affected subsystems, public interfaces, migrations or compatibility, authorization or security, billing or destructive behavior, concurrency, external side effects, rollout ordering, unverified external facts, or a large multi-package DAG. For a small low-risk change, recommend skipping while leaving the choice to the user.
+If review is skipped, do not create plan-review artifacts.
 
-If review is skipped, do not create plan-review artifacts. If review is selected, follow the persistence protocol below before dispatching the reviewer.
+## Plan-review persistence ownership
 
-## Persist plan-review evidence
+When review is selected, use `audit-persistence` for mechanical persistence. The ownership split is strict:
 
-The main planning agent owns review persistence. The `review-plan` subagent remains read-only and only returns its report.
+- **Planning agent:** live plan, finding adjudication, plan revisions, and user-facing decisions.
+- **Audit helper:** review-run directory creation, exact plan snapshots, manifest serialization, timestamps/hashes/paths, and other mechanical bookkeeping.
+- **`review-plan` agent:** its complete immutable raw review artifact.
 
-Derive `<slug>` from the plan basename by removing `.md` and then a final `-plan`. Create a new review run ID `<slug>-review-YYYYMMDD-HHmmss` using host-local time and create `.dev/plan-review/<review-run-id>/`. Never reuse, overwrite, rename, or delete an earlier review run. A later planning session that reviews the same stable plan starts a new timestamped review run.
+The planning agent must never receive a full raw review merely so it can reproduce that review into a file. The reviewer writes its own artifact before returning. The parent receives only the compact control result defined by `review-plan` and reads specific finding sections from the artifact on demand while adjudicating.
 
-Create `manifest.md` before the first review round:
+## Create the plan-review run
+
+Derive `<slug>` from the plan basename by removing `.md` and then a final `-plan`. Create a new review run ID `<slug>-review-YYYYMMDD-HHmmss` using host-local time and create `.dev/plan-review/<review-run-id>/`. Never reuse, overwrite, rename, or delete an earlier review run. A later review cycle starts a new timestamped directory and links the prior run when applicable.
+
+Create `manifest.md` once before round 1. It remains a compact mutable index, not raw evidence:
 
 ```markdown
 ---
 review_run_id: <review-run-id>
 prior_review_run: <prior review-run path or null>
-plan: <exact plan path>
+plan: <exact live plan path>
 started: <timestamp>
 completed: <timestamp or null>
 rounds: 0
 max_rounds: 3
 cycle_status: active
 completion_reason: pending
-final_verdict: <APPROVE | REVISE | pending>
+final_verdict: pending
 ---
 
 # Plan review manifest
 
 ## Reviewer provenance
 
-- write-plan skill version: `<host- or repository-reported revision when accessible, otherwise unknown>`
-- review-plan skill version: `<host- or repository-reported revision when accessible, otherwise unknown>`
-- main-agent model: `<exact host-reported identifier, or unknown>`
-- main-agent reasoning configuration: `<exact host-reported value, or unknown>`
+- write-plan skill version: `<reported revision or unknown>`
+- review-plan skill version: `<reported revision or unknown>`
+- main-agent model: `<host-reported identifier or unknown>`
+- main-agent reasoning configuration: `<host-reported value or unknown>`
 
 ## Repository context
 
@@ -173,40 +177,27 @@ final_verdict: <APPROVE | REVISE | pending>
 - Pending
 ```
 
-Do not infer unavailable provenance. Record a host- or repository-reported skill revision only when it is directly available; otherwise use `unknown`. Record reviewer model or reasoning configuration in the raw review file when the host exposes them; otherwise use `unknown`.
+Use helper field/section operations for later manifest updates instead of rereading and rewriting the complete file.
 
-For every review invocation, allocate the next integer round. Before dispatching the reviewer:
+## Run one plan-review round
 
-1. Read the complete current plan.
-2. Save an exact immutable copy as `round-NN-plan.md`. This snapshot is the authoritative plan revision that the reviewer saw; later plan edits must never modify it.
-3. Record the current repository `HEAD` and task-relevant dirty-state summary.
-4. Dispatch the read-only `review-plan` subagent with the exact live plan path, review-run ID, and round number from 1 through 3. Do not give it persistence authority.
+For round `N` from 1 through 3:
 
-When the reviewer returns, immediately save `round-NN-review.md` before editing the live plan. Preserve the reviewer's report verbatim:
+1. Allocate the next integer round.
+2. Use an exact deterministic copy, preferably `audit-persistence copy`, to save the current live plan as immutable `round-NN-plan.md`. Never regenerate this snapshot through model output.
+3. Record current repository `HEAD` and task-relevant dirty-state summary.
+4. Dispatch an independent reviewer via `delegate-work` with:
+   - `Required skill: review-plan`;
+   - `Plan File` set to the immutable `round-NN-plan.md`, not the live plan;
+   - `Review Run ID` and `Review Round`;
+   - `Raw Review Artifact` set to `.dev/plan-review/<review-run-id>/round-NN-review.md`;
+   - source/worktree access read-only, with exclusive audit-write permission only for that raw artifact path.
+5. The reviewer must write the complete report directly to `round-NN-review.md` before returning. Treat a reviewer return without the required artifact as an incomplete dispatch that does not consume the round.
+6. Accept only the compact reviewer return: verdict, confidence, artifact path, and finding index (`PR-*`, severity, category, one-line summary). Do not request the full coverage matrix or full report in the parent response.
+7. Independently validate every reported `P0`–`P3` finding. Read only the relevant finding/evidence sections from the raw artifact when the compact return is insufficient.
+8. Write `round-NN-adjudication.md` before revising the live plan. This is new planning-agent reasoning, so the planning agent owns the content.
 
-```markdown
----
-review_run_id: <review-run-id>
-round: <N>
-reviewed_plan: <round-NN-plan.md>
-repository_head: <sha>
-reviewer_skill_version: <reported revision or unknown>
-reviewer_model: <exact host-reported identifier or unknown>
-reviewer_reasoning: <exact host-reported value or unknown>
-started: <timestamp>
-completed: <timestamp>
-verdict: <APPROVE | REVISE>
-confidence: <0.0-1.0 or unknown>
----
-
-# Raw plan review
-
-<reviewer return reproduced verbatim>
-```
-
-The plan snapshot is a plan-review-specific requirement: the live plan is intentionally rewritten between review rounds, so the immutable snapshot is the evidence of what the reviewer actually saw.
-
-After persisting the raw review, independently validate every `PR-*` finding against the plan and repository. Write `round-NN-adjudication.md` before revising the live plan. Include every reported `P0`–`P3` finding so later analysis can distinguish reviewer claims from accepted planning defects:
+Use this adjudication schema:
 
 ```markdown
 ---
@@ -235,31 +226,16 @@ reviewed_plan: <round-NN-plan.md>
 - Findings: `<reported N; new material N; carried material N; confirmed advisory N; introduced by previous review fix N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
 ```
 
-Record only the immediate origin needed to distinguish an original-plan gap from one introduced by a prior review fix. Do not add broader retrospective root-cause or prevention-layer analysis during planning; that belongs to later audit.
+Do not copy the reviewer's full finding prose into adjudication. Preserve reviewer claims in the raw artifact and record only the planning agent's classification, reason, evidence, and resolution.
 
-For rounds 1 and 2, close the gate as `APPROVE` when adjudication leaves no confirmed in-scope P0–P2 finding, even if the raw reviewer verdict was based on a rejected or out-of-scope claim. Otherwise revise the live plan for confirmed in-scope P0–P2 findings, then update each adjudication entry's resolution and revision evidence before rerunning. Do not revise for P3 by default: record confirmed P3 findings as advisory with `no-change`, and never rerun review solely for them. For an `APPROVE` outcome, including one with P3 advisories, still create an adjudication file so every review invocation has a complete snapshot/raw-review/adjudication set.
+For rounds 1 and 2, close the gate as `APPROVE` when adjudication leaves no confirmed in-scope P0–P2 finding. Otherwise revise the live plan for confirmed in-scope P0–P2 findings, update adjudication resolution/revision evidence, and rerun. P3 is advisory by default and never triggers a rerun alone.
 
-Update `manifest.md` after every round with a compact entry containing:
+After each round, update `manifest.md` through helper field/section operations with snapshot path, raw review path, adjudication path, raw verdict/confidence, and compact adjudication counts. Never rewrite raw round evidence.
 
-- reviewed plan snapshot path;
-- raw review and adjudication paths;
-- verdict and confidence; and
-- finding counts by adjudication status.
+After round 3, persist and adjudicate the report before further action. If no confirmed P0–P2 finding remains, close as `APPROVE`. If any remains, do not revise automatically and do not dispatch round 4; close as `max-rounds-escalated` and ask the user to choose whether to revise the governing decision or plan, accept the documented risk, stop, or authorize a substantively revised new cycle.
 
-Set `rounds` to the highest completed round, never above 3. When the review gate closes at `APPROVE`, set `completed`, `cycle_status: passed`, `completion_reason: approved`, `final_verdict: APPROVE`, and a final aggregate summary. If round 3 still has a confirmed P0–P2 finding, set `completed`, `cycle_status: max-rounds-escalated`, `completion_reason: max-rounds`, and `final_verdict: REVISE`. Keep field names and enums stable so future audit scripts can compare plan-review categories, severities, confirmation rates, rounds-to-approval, reviewer model/skill versions, and which kinds of planning gaps recur.
+A user-authorized new cycle starts a new timestamped review-run directory at round 1 after a material plan or decision change. Link the prior run in its manifest.
 
-## Run, adjudicate, and repeat plan review
+If an independent reviewer is unavailable, perform the same review directly, write the raw review artifact once with provenance identifying the main agent, disclose the limitation, and continue through the same adjudication protocol. Do not create a fake reviewer round without a raw artifact.
 
-Follow `delegate-work` and dispatch an independent read-only reviewer that loads `review-plan` and receives the exact plan path. Persist the snapshot and raw return as specified above. Verify every finding yourself and persist adjudication before changing the plan.
-
-One plan-review cycle permits at most three completed review rounds. A dispatch that produces no reviewer return and no raw review artifact does not consume a round. Never dispatch `round-04`.
-
-For rounds 1 and 2, close the cycle if adjudication leaves no confirmed in-scope P0–P2 finding. Otherwise revise the plan for confirmed P0–P2 findings and repeat review. Ask the user immediately when correction needs a new preference, authority, external side effect, or scope expansion; the round limit does not defer an already necessary decision.
-
-After round 3, persist and adjudicate the report before taking further action. If no confirmed P0–P2 finding remains, close the gate as `APPROVE`; P3 advisories do not prevent approval. If any confirmed P0–P2 finding remains, do not revise the plan and do not dispatch another reviewer. Close this review cycle as `max-rounds-escalated` and ask the user to choose whether to revise the governing decision or plan, accept the documented risk, stop, or authorize a substantively revised new review cycle.
-
-A user-authorized new cycle starts a new timestamped review-run directory at round 1. It must follow a material plan or decision change, link the prior run in its manifest, and cannot be created merely to retry the unchanged third-round state.
-
-If an independent reviewer is unavailable or stalls beyond a reasonable bounded-review window, interrupt it, perform the same review directly, disclose that limitation, and persist the direct review using the same round artifacts with reviewer provenance identifying the main agent.
-
-Finish by reporting the exact plan path, plan-review artifact directory when review ran, a 2–3 sentence approach summary, and whether review was approved, skipped, or unavailable. Stop without implementation.
+Finish by reporting the exact plan path, plan-review artifact directory when review ran, a short approach summary, and whether review was approved, skipped, escalated, or unavailable. Stop without implementation.
