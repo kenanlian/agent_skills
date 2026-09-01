@@ -24,7 +24,9 @@ Use built-in `Explore` only for contracts classified as `explorer`; those tasks 
 
 The `junior-worker`, `senior-worker`, and `expert-worker` agents may perform either read-only or write tasks according to the common task contract. Their OpenCode definitions must deny nested subagent launches.
 
-The `reviewer` must deny nested subagent launches and remain source/worktree read-only. For a normal review contract with `Access: read-only`, it writes nothing. For a persisted review contract with `Access: audit-write`, the runtime definition must allow the reviewer to create/write only the exact raw-review artifact path named in `Write ownership`; all source, plan, code, test, config, manifest, state, adjudication, and other paths remain non-writable.
+The `reviewer` remains source/worktree read-only but may launch bounded read-only exploration subagents when a review skill requests evidence gathering. Nested delegation from the reviewer is limited to explorer-style work: repository location, tracing, mapping, exhaustive/negative search, caller/consumer closure, behavioral traces, bypass sweeps, and verification-path discovery. The reviewer must not delegate review judgment, finding severity, contract status, design decisions, implementation/fixes, or the final verdict; it independently verifies material findings and owns every review conclusion.
+
+For a normal review contract with `Access: read-only`, the reviewer writes nothing. For a persisted review contract with `Access: audit-write`, the runtime definition must allow the reviewer to create/write only the exact raw-review artifact path named in `Write ownership`; all source, plan, code, test, config, manifest, state, adjudication, and other paths remain non-writable.
 
 If the installed OpenCode permission model cannot express or honor that narrow audit-write exception, treat persisted reviewer output as unsupported and return a persistence blocker. Do not broaden the reviewer to general workspace write access and do not silently fall back to parent-side transcription of a large raw report.
 
@@ -38,7 +40,8 @@ A compatible OpenCode environment must provide:
 
 - built-in `Explore`;
 - custom `junior-worker`, `senior-worker`, `expert-worker`, and `reviewer` agents;
-- no nested subagent launch from custom workers/reviewer;
+- no nested subagent launch from custom workers;
+- reviewer task delegation enabled only for bounded read-only exploration, with reviewer-owned final judgment;
 - worker access consistent with the common task contract;
 - reviewer source-read-only behavior plus exact-path audit-write support when persisted reviews are used; and
 - local provider/model routing chosen by the user.
