@@ -142,9 +142,18 @@ function commandAppendSection(args) {
   const section = required(args, 'section');
   const payload = normalizeBody(loadPayload(args));
   const content = readText(file);
-  const { lines, end } = findSectionRange(content, section);
-  const insertion = payload ? ['', ...payload.split('\n'), ''] : [];
-  lines.splice(end, 0, ...insertion);
+  const { lines, start, end } = findSectionRange(content, section);
+  if (!payload) return;
+
+  const body = lines.slice(start + 1, end);
+  const nonEmpty = body.map((line) => line.trim()).filter(Boolean);
+  const hasOnlyPlaceholder = nonEmpty.length === 1 && ['- None', '- Pending'].includes(nonEmpty[0]);
+
+  if (hasOnlyPlaceholder) {
+    lines.splice(start + 1, end - start - 1, '', ...payload.split('\n'), '');
+  } else {
+    lines.splice(end, 0, '', ...payload.split('\n'), '');
+  }
   atomicWrite(file, lines.join('\n'));
 }
 
