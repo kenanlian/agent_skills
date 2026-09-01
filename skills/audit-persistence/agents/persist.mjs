@@ -73,6 +73,11 @@ function normalizeBody(text) {
   return text.replace(/^\n+|\n+$/g, '');
 }
 
+function escapeRegExp(value) {
+  const special = new Set(['\\', '^', '$', '.', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|']);
+  return [...value].map((char) => (special.has(char) ? `\\${char}` : char)).join('');
+}
+
 function commandCopy(args) {
   const source = required(args, 'source');
   const dest = required(args, 'dest');
@@ -173,7 +178,7 @@ function commandUpsertTableRow(args) {
     }
   }
   if (tableStart < 0) fail(`Markdown table not found in ${section}`);
-  const keyPattern = new RegExp(`^\\|\\s*${key.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*\\|`);
+  const keyPattern = new RegExp(`^\\|\\s*${escapeRegExp(key)}\\s*\\|`);
   let rowIndex = -1;
   for (let i = tableStart + 2; i < tableEnd; i += 1) {
     if (keyPattern.test(lines[i])) {
