@@ -26,10 +26,12 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 - `role`: `explorer | worker | reviewer`
 - `tier`: `junior | senior | expert`，只适用于 worker；explorer 和 reviewer 使用 `None`
-- `access`: explorer/reviewer 固定 `read-only`；worker 为 `read-only | write`
+- `access`: explorer 固定 `read-only`；worker 为 `read-only | write`；reviewer 通常为 `read-only`，在持久化审查中可使用严格限定的 `audit-write`
 - `work type`: exploration、research、implementation、design、planning、analysis 或 review
 
 其中 explorer 专门负责代码库事实发现：定位、追踪、映射、穷举和交叉验证文件、symbol、caller、consumer、route、test、registration、state/data flow 等证据。搜索范围可以很广甚至 exhaustive，但 explorer 不负责 root-cause、架构/设计选择、正确性判断或 review verdict。需要工程判断时使用相应 tier 的 worker，需要独立审查结论时使用 reviewer。
+
+`audit-write` 不是一般写权限。reviewer 的源码、计划、实现、测试和配置仍然只读，只允许写调用方明确指定的单个 raw review artifact；manifest、execution state、adjudication 和修复仍由父流程负责。
 
 `exploration` work type 固定路由到 explorer；worker 的 tier 决定所需推理能力；review 固定路由到 reviewer。各宿主 adapter 再把这些稳定语义映射为宿主原生 subagent。计划和任务 DAG 不应绑定具体模型。
 
@@ -59,16 +61,27 @@ reviewer       -> reviewer
 ~/.config/opencode/agents/reviewer.md
 ```
 
-因此调整模型时只需要修改 OpenCode/dotfiles 配置，不需要修改 `agent_skills`。三个 worker 必须禁止继续启动嵌套 subagent；`reviewer` 还必须保持只读。Explorer 固定用于只读 evidence gathering；具体 worker 任务是否可写仍由 `delegate-work` task contract 的 `access` 和 write ownership 决定。
+因此调整模型时只需要修改 OpenCode/dotfiles 配置，不需要修改 `agent_skills`。三个 worker 必须禁止继续启动嵌套 subagent；reviewer 也必须禁止嵌套 subagent，并保持源码只读。若使用持久化审查，OpenCode 的 reviewer 配置还需要支持对 task contract 中唯一 raw-review artifact 路径的窄写权限。
 
 ## 计划工作流
 
 大型功能和重构使用以下闭环：
 
 1. `write-plan` 将讨论与代码库事实写成稳定的 `.dev/plan/<slug>-plan.md`，包含需求/行为契约、工作包 DAG、ownership、委派提示和验证映射。
-2. 计划完成后，由用户决定是否运行 `review-plan`；Agent 根据接口、数据、安全、兼容、并发、发布和任务规模给出风险建议。确认的范围内问题自动修订并复审，新增决策或范围扩展仍由用户决定。
+2. 计划完成后，由用户决定是否运行 `review-plan`。每轮计划副本通过确定性复制保存；reviewer 自己把完整 raw review 写入 `.dev/plan-review/.../round-NN-review.md`，只向父 Agent 返回 verdict、artifact path 和紧凑 finding index。父 Agent 独立 adjudicate 并按需读取具体 finding，而不接收完整 review 用于转抄。
 3. `execute-plan` 按 DAG 分波次调度。封闭可验证的串行或并行节点都可委派，父 Agent 保留跨任务决策、checkpoint、集成和最终验证。
-4. 每次执行在 `.dev/plan/` 留下带时间戳的 execution-state 文件，用于跨会话恢复并永久记录工作包、验证和审查结果。
-5. 实现验证通过后，由用户决定运行 `review-plan-conformance`、`review-patch`、两者或跳过；Agent 根据变更风险给出建议，并自动闭环计划范围内的确认问题。
+4. 每次执行在 `.dev/plan/` 留下带时间戳的 execution-state 文件用于跨会话恢复和审计。decision、blocker、deviation、verification 等语义仍由执行 Agent 判断，但文件的字段、表格和 section 更新通过 `audit-persistence` helper 做窄范围 serialization，避免反复读取并 patch 整个大文件。
+5. 实现验证通过后，由用户决定运行 `review-plan-conformance`、`review-patch`、两者或跳过。选中的 reviewer 分别直接写自己的 immutable raw artifact，并只返回 compact control result；父执行 Agent 负责 adjudication、修复和是否继续下一轮。
+6. 执行 Review 只记录 `HEAD`、review scope 和 diff base/head 等元数据；当前不保存每轮 reviewed patch snapshot，接受 worktree 历史不能完全重建的审计精度。
+
+共享的 `audit-persistence` skill/utility 负责机械持久化：不可变 copy、frontmatter/字段更新、Markdown section 更新和 execution-state 表格行更新。原则是：**谁产生语义内容，谁拥有内容；已经存在的内容和机械状态不通过 LLM 重新生成。**
 
 计划只描述能力角色和执行契约，不绑定具体模型。模型选择、隔离方式、任务契约、ownership 和返回压缩统一由 `delegate-work` 维护。
+
+## 持久化 helper 验证
+
+`audit-persistence` 没有外部依赖，可以直接运行聚焦测试：
+
+```bash
+node --test 'skills/audit-persistence/agents/tests/*.test.mjs'
+```
