@@ -9,7 +9,9 @@ material nearby in `references/`, `agents/`, `assets/`, or
 contains reusable design references plus executable helpers in `agents/`.
 Its shared Node tests are in `skills/baoyu-design/agents/tests/`; generator
 packages have their own sources under `agents/gen-pptx/src/` and
-`agents/gen-video/src/`.
+`agents/gen-video/src/`. Shared workflow infrastructure may also expose small
+executable helpers inside its own skill, such as
+`skills/audit-persistence/agents/persist.mjs`.
 
 ## Development & Verification Commands
 
@@ -17,6 +19,9 @@ There is no repository-wide build command. Run focused checks for the files you
 change:
 
 ```bash
+# Audit persistence helper
+node --test 'skills/audit-persistence/agents/tests/*.test.mjs'
+
 # Shared baoyu-design agent tests, from the repository root
 node --test 'skills/baoyu-design/agents/tests/*.test.mjs'
 
