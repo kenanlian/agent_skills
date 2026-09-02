@@ -1,6 +1,6 @@
 ---
 name: delegate-work
-description: Delegate bounded exploration, implementation, review, design, or research to an isolated subagent using a self-contained task contract and host-specific capability routing. Use when work should run in a separate context, serially through a specialist, or in parallel.
+description: Delegate bounded exploration, implementation, review, design, or research to an isolated subagent using a self-resolving task contract and host-specific capability routing. Use when work should run in a separate context, serially through a specialist, or in parallel.
 ---
 
 # Delegate work
@@ -86,7 +86,7 @@ If the host is not covered, preserve the common semantic classification and task
 
 ## Build the task contract
 
-Every delegated prompt must be self-contained and minimal. Include all sections below; use `None` when empty.
+Delegated tasks must be self-resolving. When required context already exists in a stable repository artifact, pass its exact path and stable identifier instead of reproducing the artifact contents. Include all sections below; use `None` when empty.
 
 ```markdown
 ## Delegation
@@ -107,7 +107,7 @@ Required references:
 
 ## Task
 
-<State the concrete work and enough context to understand it.>
+<State the concrete work. Do not paste artifact contents that Context sources already identify.>
 
 ## Goal
 
@@ -125,18 +125,29 @@ Excluded:
 - `<areas and changes outside the assignment>`
 
 Write ownership:
-- `<worker-owned paths; exact raw-review artifact for audit-write reviewer; or read-only>`
+- `<worker-owned paths; exact raw-review artifact for audit-write reviewer; exact Result Artifact when provided; or read-only>`
+
+## Context sources
+
+Plan:
+- File: `<path or None>`
+- Work package: `<WP-* or None>`
+- Relevant contracts: `<C* ids, or None>`
+
+Dependency artifacts:
+- `<predecessor id>: <exact path>`
+- or None
+
+Result artifact:
+- `<exact path or None>`
 
 ## Context
 
 Shared contracts:
-- `<only global behavior/invariants this task must preserve>`
+- `<contract IDs to preserve; resolve prose from the plan when a plan file is given>`
 
 Task-local context:
-- `<relevant paths, symbols, patterns, errors, or decisions>`
-
-Verified dependency outputs:
-- `<interfaces/artifacts from predecessors, or None>`
+- `<only facts that do not already exist in a stable artifact>`
 
 Authority boundaries:
 - `<decisions the subagent may and may not make>`
@@ -151,7 +162,7 @@ Authority boundaries:
 
 ## Return
 
-Return all of the following:
+When Result artifact is None, return all of the following:
 1. Outcome: whether the Goal was achieved.
 2. Work performed: bounded investigation, implementation, or review completed.
 3. Evidence: relevant files, symbols, changed files, or observed behavior.
@@ -162,13 +173,58 @@ Return all of the following:
 Do not return raw exploration notes, full logs, or large source excerpts unless explicitly requested. Mark material claims as `confirmed`, `inferred`, or `unverified`.
 ```
 
+The child must resolve Context sources itself: read the plan file, locate the named `WP-*` heading, read caller-named `C*` from that plan, and read dependency artifacts. Pointer resolution is fail-closed. If a required plan file, work-package heading, contract ID, or dependency artifact is missing or ambiguous, return a blocker; do not guess and do not ask the parent to paste the artifact body.
+
+Inline only current control instructions: concrete goal, included/excluded scope, access, write ownership, authority boundary, special requirements for this dispatch, and the exact failure being corrected. Do not copy work-package prose, contract prose, predecessor reports, or skill text the child can load.
+
+For correction or resume, pass pointers to the plan, work package, previous result artifact, the concrete failure, and any new result artifact path. Do not re-copy the work package.
+
+When the caller provides Result artifact, the child must persist the detailed result before returning:
+
+1. Write the detailed result to that exact path with `audit-persistence` `write --exclusive` (or equivalent exclusive create). Confirm the write succeeded.
+2. Return only this compact receipt:
+
+```text
+Outcome: <completed | blocked>
+Package: <WP-* or None>
+Attempt: <N or None>
+Artifact: <exact path>
+Changed:
+- <compact changed-file list>
+Verification:
+- <check-id>: <PASS | FAIL>
+Handoff: <one line or None>
+Deviations: <one line or None>
+Blockers: <one line or None>
+Evidence limitations: <one line or None>
+```
+
+3. Do not explain the full implementation, repeat the artifact, return stdout, large code, or exploration notes in the receipt.
+
+If the artifact cannot be written, return only:
+
+```text
+Outcome: persistence-failure
+Package: <WP-* or None>
+Artifact: <path>
+Reason: <concise reason>
+```
+
+Do not send the full report so the parent can persist it.
+
+The artifact may be more detailed than the receipt but must not be a transcript. Omit private reasoning, chain-of-thought, raw exploration notes, unrelated excerpts, full console logs, and copies of the work package or plan contracts. Keep only execution evidence later Main, successors, audit, or resume may need.
+
+Write ownership must list the exact Result Artifact path. Do not grant a `.dev/execution/**` wildcard.
+
+When Result artifact is omitted, keep the standalone Return protocol above. Do not create an artifact for ordinary exploration, research, or analysis.
+
 For an `audit-write` reviewer, the required review skill's compact return protocol overrides any generic Return item that would otherwise duplicate the full raw review. The reviewer returns verdict/status, artifact path, compact finding/violation index, and evidence limitations; the full report stays in the artifact.
 
 Use `Required skill: None` when no applicable domain skill exists. When a skill is required, the parent reads the skill/references needed to define scope, safety, shared contracts, or verification before dispatch; the subagent independently loads them.
 
 The task contract authority order is: task-specific requirements, referenced plan work package/shared contracts, then repository reality. Resolve conflicts before dispatch.
 
-Self-contained does not mean exhaustive. Pass relevant shared contracts, current work package, direct dependency outputs, and for persisted reviews the exact artifact path. Do not pass parent conversation, unrelated plan sections, other work packages' implementation details, duplicated skill text, or raw discovery logs.
+Self-resolving does not mean exhaustive. Pass pointers to relevant shared contracts, the current work package, direct dependency artifacts, and for persisted reviews the exact artifact path. Do not pass parent conversation, unrelated plan sections, other work packages' implementation details, duplicated skill text, or raw discovery logs.
 
 ## Adapt to work type
 
@@ -176,7 +232,7 @@ Retain common Return fields, then add only work-type-specific evidence:
 
 - **Exploration:** exact paths/symbols, flow/relationship, search coverage, and evidence limitations. Negative claims state aliases/string forms searched. No diagnosis/design/verdict.
 - **Research:** sources/versions, evidence, limitations; separate external from repository facts.
-- **Implementation:** files changed, behavior delivered, tests added/updated, focused commands/results, and needed-but-unperformed scope expansion. Same worker owns local implementation and focused tests.
+- **Implementation:** files changed, behavior delivered, tests added/updated, focused commands/results, and needed-but-unperformed scope expansion. Same worker owns local implementation and focused tests. When Result artifact is provided, put that detail in the artifact and return only the compact receipt.
 - **Review:** direct verdict and compact issue index. When `audit-write`, the full review is persisted by the reviewer and not duplicated in the return.
 - **Design/planning/analysis:** direct recommendation/judgment, evidence, and unresolved decisions.
 
@@ -185,7 +241,7 @@ If an explorer discovers the real question requires diagnosis/design/judgment, r
 ## Dispatch and collect
 
 1. Classify role, tier, access, and work type. Enforce `explorer → None + read-only + exploration`; `reviewer → None + read-only|audit-write + review`; `worker → junior|senior|expert` with read-only/write as required.
-2. Load the active host adapter and apply it. Put only bounded task context in the contract.
+2. Load the active host adapter and apply it. Put a self-resolving task contract in the dispatch: inline control plus exact pointers to stable artifacts.
 3. Dispatch ready work concurrently only when dependency outputs are stable, write ownership does not overlap, and no shared interface remains unsettled. Two audit-write reviewers may run concurrently only when their artifact paths are distinct.
 4. Wait for every result in the current wave and verify task contract, actual edits/artifacts, and focused checks before releasing dependent work.
 5. Reject scope/access violations. A subagent that discovers a necessary out-of-scope edit returns it as a blocker instead of making it.

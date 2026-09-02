@@ -36,12 +36,24 @@ Every execution has a durable state file in the plan's `.dev/plan/` directory. D
 
 Before creating it, list matching states:
 
-- If exactly one state with the same plan path and SHA-256 is active (`in-progress`, `awaiting-review-choice`, `fixing-review-findings`, `awaiting-review-decision`, or `blocked`), read it completely once, verify recorded repository state and completed package checks, then resume it.
+- If exactly one state with the same plan path and SHA-256 is active (`in-progress`, `awaiting-review-choice`, `fixing-review-findings`, `awaiting-review-decision`, or `blocked`), read that compact state completely once, verify plan path/SHA, restore DAG status from the WP table, read latest result artifacts by pointer when needed, then resume. Do not rebuild old worker conversations.
 - If more than one matching active state exists, stop and report all paths.
 - If only completed states match, verify current contracts still hold. Report already-completed when they do; treat later material drift as requiring plan revision.
 - If none matches, create a new timestamped state. A changed plan SHA-256 always starts a new state and never overwrites older records.
 
+Legacy 5-column WP tables (no Attempt / Result artifact columns) continue to completion without mid-run migration. Detect a legacy execution when the resumed WP table lacks those columns. New executions, including a new state after a plan SHA change, use the 6-column schema below. `upsert-table-row` must work for both column counts.
+
+A legacy execution keeps the pre-change control protocol through completion:
+
+- upsert 5-column rows only (`ID | Status | Executor | Changed files | Focused verification`); do not add Attempt or Result artifact columns;
+- do not require Result Artifact, attempt allocation, or the compact receipt; workers use the standalone return;
+- mutate the deviations heading that already exists in the file. Pre-patch states use `## Deviations and blockers`; new states use `## Active deviations and blockers`. Compact active-only content applies to both. Never call `replace-section`/`append-section` with a heading the file does not contain.
+
+Pointer dispatch and canonical-heading fallback still apply: they do not require a state-schema change.
+
 Create the state after capturing the pre-execution working tree so the state file itself is recognized as expected. Keep the plan immutable during execution.
+
+Execution state is current recovery/control state, not an execution narrative. Keep it permanently and never rename or delete it. Detailed history lives in worker Result Artifacts, review artifacts, and the repository.
 
 Use this canonical structure:
 
@@ -50,6 +62,7 @@ Use this canonical structure:
 
 Plan: `<exact path>`
 Plan SHA-256: `<digest>`
+Execution artifacts: `.dev/execution/<execution-id>/`
 Started: `<timestamp>`
 Updated: `<timestamp>`
 Status: `in-progress | awaiting-review-choice | fixing-review-findings | awaiting-review-decision | blocked | completed`
@@ -57,16 +70,17 @@ Status: `in-progress | awaiting-review-choice | fixing-review-findings | awaitin
 ## Baseline
 
 - Commit: `<sha>`
-- Relevant pre-existing changes: `<paths and ownership notes, or None>`
-- Drift decision: `<result and evidence>`
+- Relevant pre-existing changes: `<compact summary>`
+- Drift decision: `<compact current decision>`
 
 ## Work packages
 
-| ID | Status | Executor | Changed files | Focused verification |
-| --- | --- | --- | --- | --- |
-| WP-01 | pending | — | — | — |
+| ID | Status | Attempt | Executor | Result artifact | Focused verification |
+| --- | --- | --- | --- | --- | --- |
+| WP-01 | verified | 1 | senior-worker | `.../WP-01-attempt-01.md` | V1 pass |
+| WP-02 | active | 2 | expert-worker | `.../WP-02-attempt-02.md` | pending |
 
-## Deviations and blockers
+## Active deviations and blockers
 
 - None
 
@@ -87,19 +101,24 @@ Status: `in-progress | awaiting-review-choice | fixing-review-findings | awaitin
 - Pending
 ```
 
-The state file is an audit and recovery artifact. Keep it permanently and never rename or delete it.
+A work-package row stores only status, latest attempt, executor, latest result artifact, and compact verification status. Do not accumulate implementation narratives, command stdout, changed-symbol detail, superseded worker results, or raw review content in the state file.
+
+`## Active deviations and blockers` (or the legacy `## Deviations and blockers` heading if that is what the file has) stores only items that still affect the next step. After a blocker is resolved, remove it with `replace-section` on that existing heading; do not keep a resolved narrative for audit completeness.
+
+Review-gate fields stay compact pointers, for example `incorrect, round 1` plus the review directory. Do not copy finding or adjudication prose into execution state.
 
 ### State ownership and serialization
 
 The execution agent owns all semantic execution records: drift decisions, package status judgments, blockers, deviations, corrective actions, verification interpretations, user decisions, review-gate decisions, and completion claims. `audit-persistence` owns how those records are serialized into the existing state file.
 
-After initialization, do not repeatedly load the entire state merely to edit it. Prefer narrow helper operations:
+After initialization, do not repeatedly load the entire state merely to edit it, and never rewrite the complete state file to update one row. Prefer narrow helper operations:
 
 - `set-field` for `Status` and `Updated`;
-- `upsert-table-row` for a `WP-*` row;
-- `append-section` for a newly reasoned deviation, blocker, corrective action, or user decision;
+- `upsert-table-row` for a `WP-*` row using the table's existing column shape (6-column latest attempt and result artifact on new states; 5-column rows on legacy states; do not append historical rows);
+- `append-section` for a newly active deviation, blocker, or user decision, targeting the deviations heading already in the file;
+- `replace-section` to set that same deviations heading to the remaining active items, or `- None`;
 - `replace-section` or `append-section` for integration/final-verification records;
-- `set-list-item` for review-gate fields.
+- `set-list-item` for compact review-gate fields.
 
 A helper must never invent semantic content. The execution agent supplies the exact concise record to serialize. If a complex transition requires reading existing state for reasoning, read the relevant section; do not rewrite unrelated sections through model output.
 
@@ -117,11 +136,107 @@ Schedule by waves:
 
 `Delegation: preferred` means dispatch a bounded subagent even when serial. `allowed` permits direct main-agent execution when dispatch overhead exceeds value. `main-required` remains with the coordinator.
 
-Follow `delegate-work` for every subagent. Give only relevant shared contracts, the complete current `WP-*`, direct verified dependency outputs, exact ownership, focused verification, and required domain skill or `None`. Do not pass the full parent conversation or unrelated packages. Resume the same subagent for corrections when possible.
+Follow `delegate-work` for every subagent. For a delegated implementation work package, pass pointers rather than reproducing canonical artifacts:
+
+- Plan File
+- Work Package ID
+- Relevant Contract IDs
+- Dependency Artifact Paths
+- Result Artifact (exact path)
+
+Plus task-local control: goal, included/excluded scope, access, write ownership (including the exact Result Artifact path), authority boundary, focused execution requirements, and any correction instruction.
+
+Do not pass the full parent conversation, unrelated packages, copied WP prose, copied contract prose, or copied predecessor reports when those exist as stable artifacts.
+
+Before pointer dispatch, confirm the target WP has one unique canonical heading in the plan. If it does not (legacy plan), fall back to inlining that WP's body, record one fallback deviation in execution state, and do not rewrite the old plan. Only plans created or revised after this protocol are guaranteed pointer-resolvable.
+
+The worker must resolve those pointers itself. Missing, unreadable, or ambiguous plan/WP/contract/dependency artifacts are a blocker; do not default to re-sending WP prose.
+
+On a new 6-column execution, delegated implementation work packages must provide Result Artifact. Derive `<execution-id>` from the execution-state basename and create `.dev/execution/<execution-id>/packages/` once per execution. Each attempt is:
+
+```text
+.dev/execution/<execution-id>/packages/<WP-ID>-attempt-NN.md
+```
+
+Attempt numbers are assigned by Main before dispatch:
+
+1. Read the WP row's latest attempt; the next attempt is that value + 1, or 1 if none.
+2. Upsert the state row (`Status=active`, `Attempt=N`, `Result artifact=<new path>`) before dispatch.
+3. The worker creates the artifact with `audit-persistence` `write --exclusive`. A reused attempt number fails because the file exists. Never overwrite an old attempt.
+
+Write ownership includes the exact Result Artifact path only, not `.dev/execution/**`.
+
+`.dev/execution/` is git-versioned with plan and review artifacts (via the existing `.dev` store) and retained permanently. Do not gitignore it. It is execution evidence, unlike `delegations/` (temporary relay, gitignored).
+
+Suggested work-artifact shape:
+
+```markdown
+---
+execution_id: <execution-id>
+work_package: WP-07
+attempt: 1
+plan: <plan path>
+plan_sha256: <digest>
+executor: <logical worker role/tier>
+outcome: completed
+---
+
+# WP-07 implementation result
+
+## Delivered behavior
+
+<concise factual description>
+
+## Changes
+
+- `src/foo.ts`
+  - <material change>
+
+## Verification
+
+### V12
+
+Command:
+`...`
+
+Result:
+PASS
+
+Observed:
+<concise relevant evidence>
+
+## Handoff
+
+- <output needed by successor, or None>
+
+## Deviations
+
+- None
+
+## Blockers
+
+- None
+
+## Evidence limitations
+
+- None
+```
+
+For correction or resume of the same worker, pass pointers to the plan, work package, previous result artifact, the concrete failure, and a new attempt path. Do not re-copy the work package. Resume the same subagent for corrections when possible.
 
 If a worker changes scope, shared interfaces, or files outside ownership, do not accept the result. Confirm the violation from the changed-file set and only the necessary diff context, preserve unrelated changes, and resume the same agent with the exact violation. If safe separation is no longer possible, serialize the work under main-agent control.
 
 ## Accept packages and verify integration
+
+After a persisted implementation worker returns from a 6-column execution, and before the acceptance gate, confirm artifact completeness:
+
+- the Result Artifact exists at the exact dispatch path;
+- the file is non-empty;
+- frontmatter `execution_id`, `work_package`, `attempt`, and `outcome` match this dispatch.
+
+Missing or mismatched artifact is an incomplete return: resume the same worker to persist the artifact. Do not enter acceptance and do not transcribe the report into the artifact.
+
+The compact receipt is the control-plane return. When more worker detail is needed, read the artifact. Do not expect a long implementation narrative in the parent conversation.
 
 For each package, the main execution agent performs an acceptance gate rather than a second full code review:
 
@@ -129,7 +244,7 @@ For each package, the main execution agent performs an acceptance gate rather th
 - confirm the worker produced the handoff outputs required by the plan and that direct consumers have the dependency information they need;
 - confirm the worker reports the plan's focused `V*` commands and observed results. Rerun a focused check only when the plan requires coordinator-side verification, evidence is missing or ambiguous, a shared/load-bearing boundary changed, or a concrete risk/failure warrants independent confirmation;
 - inspect reported deviations, blockers, and material drift. If acceptance fails, resume the same worker for correction when possible rather than independently re-reviewing and repairing the whole package;
-- record executor, changed files, focused-verification evidence, deviations, and handoff outputs through narrow state-helper operations; and
+- record executor, latest attempt, result artifact pointer, and compact verification status through narrow state-helper operations; and
 - never release a consumer based only on a subagent completion claim.
 
 A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting belongs to `review-patch`, and complete plan-contract coverage belongs to `review-plan-conformance` when those review gates are selected.
@@ -144,7 +259,7 @@ Before acting on a material risk, classify it:
 - **`verification-escalation`:** behavior is settled but risk warrants stronger proof. Add the smallest meaningful negative/failure/repetition/concurrency/compatibility check and record why.
 - **`decision-escalation`:** multiple reasonable corrections change user behavior, public interfaces, data, security, compatibility, failure semantics, rollout, authority, or external effects. Pause affected work and ask the user with evidence, impact, options, and recommendation.
 
-These records are semantic content owned by the execution agent. Serialize them into `## Deviations and blockers` without reproducing the rest of the state file.
+These records are semantic content owned by the execution agent. Serialize currently active items into the deviations heading that already exists in the state file without reproducing the rest of the file.
 
 ## Run post-execution reviews
 
@@ -287,7 +402,7 @@ head_before_fixes: <sha>
 
 Do not copy the full raw reviewer prose into adjudication. Reviewer claims remain in immutable raw artifacts; adjudication records the execution agent's classification and resolution.
 
-Update the review manifest after each round through helper operations with raw artifact paths, adjudication path, verdicts/confidence, repository metadata, and compact counts. Update execution-state review-gate fields through `set-list-item` rather than whole-file rewriting.
+Update the review manifest after each round through helper operations with raw artifact paths, adjudication path, verdicts/confidence, repository metadata, and compact counts. Update execution-state review-gate fields through `set-list-item` rather than whole-file rewriting. Keep those fields as compact pointers (verdict, round, directory); do not copy findings or adjudication into execution state.
 
 ## Fix and rerun
 

@@ -52,7 +52,7 @@ Wrong line numbers, local imports, helper placement, exact test counts, non-load
 
 ### 1. Internal executability
 
-Check scope, terminology, contracts, assumptions, settled decisions, executable entry points, ordering, dependencies, work-package bounds, focused verification, predecessor outputs, successor handoffs, parallel ownership, main-owned integration, and contingencies. Flag package size or splitting only when it creates an unresolved decision, overlapping authority, unstable handoff, or unsafe schedule.
+Check scope, terminology, contracts, assumptions, settled decisions, executable entry points, ordering, dependencies, work-package bounds, unique canonical `WP-*` headings, focused verification, predecessor outputs, successor handoffs, parallel ownership, main-owned integration, and contingencies. Each `WP-*` must have exactly one heading containing that identifier so an executor can resolve the package from the plan file plus ID. A missing, duplicated, or body-only WP ID is a work-package-boundary defect. Flag package size or splitting only when it creates an unresolved decision, overlapping authority, unstable handoff, or unsafe schedule.
 
 ### 2. Repository and risk grounding
 

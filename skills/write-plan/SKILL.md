@@ -57,6 +57,16 @@ Assign stable IDs:
 - `WP-01`, `WP-02`, ... for implementation work packages; and
 - `V1`, `V2`, ... for verification cases.
 
+Every work package must have one unique canonical heading containing its stable "WP-*" identifier so downstream agents can resolve the package directly from the saved plan.
+
+```markdown
+### WP-07 — Implement backlink navigation
+```
+
+The addressable identifier is `WP-07`. It must appear in that heading, not only in a DAG table or body prose. Do not reuse an ID for a different work boundary, and do not renumber a WP that still represents the same boundary.
+
+Stable IDs exist for addressing and coordination. Do not generate separate execution shards or machine-derived semantic copies of the plan.
+
 Every requirement must map through at least one contract and work package to verification. Every work package must map back to an authorized requirement. The plan names capability roles and delegation policy, never a concrete model.
 
 A work package is bounded only when it has one decidable goal, stable inputs, explicit ownership, no unresolved cross-package decision, and focused verification. Express dependencies as a DAG. Mark why a node is serial, which ready nodes are parallel-safe, and which verified predecessor output a successor consumes.
@@ -91,7 +101,7 @@ Show the dependency graph or a compact dependency table. State serial reasons, p
 
 ### Work packages
 
-For every `WP-*`, state:
+For every `WP-*`, give it one unique canonical heading that contains the ID, then state:
 
 - **Goal and contracts:** one observable result and the `R*`/`C*` IDs it delivers.
 - **Dependencies and scheduling:** predecessors, serial reason, parallel-safe peers, and `Delegation` value.
@@ -115,7 +125,7 @@ Read the complete plan and apply these gates:
 
 - every requested outcome has an `R → C → WP → V` path;
 - every public producer change accounts for all consumers;
-- every work package is independently understandable and verifiable;
+- every work package has one unique canonical heading containing its `WP-*` identifier and is independently understandable and verifiable;
 - parallel packages have non-overlapping ownership and stable interfaces;
 - the main-owned integration path proves the combined behavior; and
 - a fresh implementer makes no undeclared load-bearing decision.

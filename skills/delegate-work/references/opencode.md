@@ -30,7 +30,7 @@ For a normal review contract with `Access: read-only`, the reviewer writes nothi
 
 If the installed OpenCode permission model cannot express or honor that narrow audit-write exception, treat persisted reviewer output as unsupported and return a persistence blocker. Do not broaden the reviewer to general workspace write access and do not silently fall back to parent-side transcription of a large raw report.
 
-Task-specific worker ownership and reviewer audit ownership come from the common task contract. OpenCode definitions provide platform-level safety defaults; they must not override a narrower contract.
+Task-specific worker ownership and reviewer audit ownership come from the common task contract. That contract may name exact pointers to stable artifacts instead of inlining their contents; the child resolves those pointers. OpenCode definitions provide platform-level safety defaults; they must not override a narrower contract.
 
 ## Runtime configuration boundary
 

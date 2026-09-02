@@ -4,7 +4,7 @@ Use this reference only when `delegate-work` is running under Cursor. The common
 
 ## Subagent and isolation
 
-Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated subagent context and provide the complete task contract; never rely on or attempt to pass the parent conversation.
+Always use the built-in `generalPurpose` subagent. Rely on Cursor's isolated subagent context and provide the complete task contract; never rely on or attempt to pass the parent conversation. The task contract contains either necessary inline context or exact pointers sufficient for the child to resolve that context.
 
 Route `explorer` by its specialized role and route workers by capability tier:
 

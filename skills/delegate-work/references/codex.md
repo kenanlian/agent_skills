@@ -4,7 +4,7 @@ Use this reference only when `delegate-work` is running under Codex. The common 
 
 ## Spawn and isolation
 
-Always spawn with `fork_turns: "none"`. Put all necessary context in the task contract; never fork or otherwise pass the parent agent's conversation context.
+Always spawn with `fork_turns: "none"`. Put the complete task contract in the spawn; never fork or otherwise pass the parent agent's conversation context. The task contract contains either necessary inline context or exact pointers sufficient for the child to resolve that context.
 
 Route `explorer` by its specialized role and route workers by capability tier:
 

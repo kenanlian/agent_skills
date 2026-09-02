@@ -19,6 +19,8 @@ Separate semantic ownership from file mutation:
 
 The helper must never infer a verdict, blocker, decision, deviation, resolution, or verification result. The caller supplies those values.
 
+Execution state is a current recovery/control artifact, not an execution narrative. Upsert a work-package row in the table's existing column shape; do not append historical rows and do not migrate a 5-column table to 6 columns mid-run. Clear resolved blockers with `replace-section` on the deviations heading that already exists in the file (`## Active deviations and blockers` on new states, `## Deviations and blockers` on pre-patch states). Callers must not rewrite the complete state file to update one row. Immutable worker Result Artifacts are exact-path creates via `write --exclusive`.
+
 ## Utility
 
 The executable helper is `agents/persist.mjs`. Resolve it from this skill's directory when the host exposes skill paths. If the host cannot execute the helper, use an equivalent deterministic filesystem command or a narrowly scoped file edit; never fall back to reproducing an existing large artifact through model output.
@@ -58,14 +60,23 @@ node <audit-persistence>/agents/persist.mjs upsert-table-row \
   --file .dev/plan/foo-execution-....md \
   --section '## Work packages' \
   --key WP-03 \
-  --row '| WP-03 | verified | senior-worker | src/a.ts | V5 pass |'
+  --row '| WP-03 | verified | 1 | senior-worker | `.dev/execution/<id>/packages/WP-03-attempt-01.md` | V5 pass |'
+
+node <audit-persistence>/agents/persist.mjs replace-section \
+  --file .dev/plan/foo-execution-....md \
+  --section '## Active deviations and blockers' \
+  --text '- None'
+
+node <audit-persistence>/agents/persist.mjs write --exclusive \
+  --file .dev/execution/<id>/packages/WP-03-attempt-01.md \
+  --content-file /tmp/wp-03-attempt-01.md
 ```
 
 For multi-line semantic text, prefer `--content-file` or stdin rather than shell-escaping a long value.
 
 ## Safety
 
-- `copy` and `write --exclusive` fail if the destination exists.
+- `copy` and `write --exclusive` fail if the destination exists. Immutable worker Result Artifacts use `write --exclusive` at the caller-provided exact path; do not add a duplicate command for that create-once behavior.
 - Never delete, rename, truncate, or overwrite an immutable prior-round artifact.
 - `set-frontmatter`, `set-field`, `set-list-item`, `append-section`, `replace-section`, and `upsert-table-row` are for mutable state/index artifacts only, such as execution state and manifests.
 - Keep audit paths inside the run directory authorized by the calling skill.
