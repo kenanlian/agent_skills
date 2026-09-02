@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave verification, integration, and user-selected conformance and patch review through completion.
+description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave acceptance, integration, and user-selected conformance and patch review through completion.
 disable-model-invocation: true
 ---
 
@@ -111,25 +111,28 @@ Schedule by waves:
 
 1. Stabilize contract/schema/shared-interface packages before consumers.
 2. Release every independent ready package whose ownership does not overlap.
-3. After the wave, collect results, inspect actual diffs, verify contract compliance and focused checks, then record each package as `verified` or `blocked` through the helper.
-4. Release dependent packages only after the checkpoint passes.
+3. After the wave, collect worker results and perform a lightweight acceptance gate for each package: confirm scope/ownership, required handoff outputs, focused-verification evidence, and absence of material drift. Do not duplicate patch-level correctness review or full plan-conformance analysis here. Record each package as `verified` or `blocked` through the helper.
+4. Release dependent packages only after the acceptance gate passes.
 5. Keep cross-package integration and final verification with the main execution agent.
 
 `Delegation: preferred` means dispatch a bounded subagent even when serial. `allowed` permits direct main-agent execution when dispatch overhead exceeds value. `main-required` remains with the coordinator.
 
 Follow `delegate-work` for every subagent. Give only relevant shared contracts, the complete current `WP-*`, direct verified dependency outputs, exact ownership, focused verification, and required domain skill or `None`. Do not pass the full parent conversation or unrelated packages. Resume the same subagent for corrections when possible.
 
-If a worker changes scope, shared interfaces, or files outside ownership, do not accept the result. Inspect the shared tree, preserve unrelated changes, and resume the same agent with the exact violation. If safe separation is no longer possible, serialize the work under main-agent control.
+If a worker changes scope, shared interfaces, or files outside ownership, do not accept the result. Confirm the violation from the changed-file set and only the necessary diff context, preserve unrelated changes, and resume the same agent with the exact violation. If safe separation is no longer possible, serialize the work under main-agent control.
 
-## Verify packages and integration
+## Accept packages and verify integration
 
-For each package:
+For each package, the main execution agent performs an acceptance gate rather than a second full code review:
 
-- inspect every changed hunk in context and confirm promised `C*` behavior and prohibited paths;
-- run the plan's focused `V*` checks plus the smallest objective check needed for the actual edit;
-- diagnose and fix failures within authorized scope, then rerun before marking verified;
-- record executor, changed files, observed focused verification, deviations, and handoff outputs through narrow state-helper operations; and
+- confirm the actual changed-file set stays within package ownership and that no shared interface, schema, contract boundary, or unrelated file was changed without authorization; inspect only the diff context needed to resolve those questions, not every changed hunk by default;
+- confirm the worker produced the handoff outputs required by the plan and that direct consumers have the dependency information they need;
+- confirm the worker reports the plan's focused `V*` commands and observed results. Rerun a focused check only when the plan requires coordinator-side verification, evidence is missing or ambiguous, a shared/load-bearing boundary changed, or a concrete risk/failure warrants independent confirmation;
+- inspect reported deviations, blockers, and material drift. If acceptance fails, resume the same worker for correction when possible rather than independently re-reviewing and repairing the whole package;
+- record executor, changed files, focused-verification evidence, deviations, and handoff outputs through narrow state-helper operations; and
 - never release a consumer based only on a subagent completion claim.
+
+A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting belongs to `review-patch`, and complete plan-contract coverage belongs to `review-plan-conformance` when those review gates are selected.
 
 After all packages are verified, run the plan's integration and end-to-end checks. Confirm every `R → C → WP → V` path and requested observable behavior. Record complete commands and observed results. Build/typecheck alone is insufficient when new behavior is promised.
 
