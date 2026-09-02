@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave acceptance, integration, and user-selected conformance and patch review through completion.
+description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave acceptance, integration, and default-on conformance and patch review through completion, adjustable only by explicit user decline.
 disable-model-invocation: true
 ---
 
@@ -12,7 +12,7 @@ Before implementation work or codebase exploration, read the exact plan file sup
 - Treat the saved plan as the semantic source of truth. Conversation summaries are secondary.
 - If the path is unknown, missing, or unreadable, stop and request the exact path. Do not guess or reconstruct it.
 - Never silently redesign a load-bearing behavior, interface, data, compatibility, security, or rollout decision.
-- Continue until every package, verification step, and user-selected review gate is complete unless a genuine blocker needs user information or authority.
+- Continue until every package, verification step, and the effective review gate is complete unless a genuine blocker needs user information or authority.
 - Use `audit-persistence` for mechanical audit/state mutation. Do not reread and rewrite large state, manifest, snapshot, or raw-review files when a deterministic helper operation can update them.
 </critical>
 
@@ -146,16 +146,15 @@ Before acting on a material risk, classify it:
 
 These records are semantic content owned by the execution agent. Serialize them into `## Deviations and blockers` without reproducing the rest of the state file.
 
-## Offer post-execution reviews
+## Run post-execution reviews
 
-After implementation and final verification pass, set state to `awaiting-review-choice`. Honor a review preference already stated by the user. Otherwise offer exactly `both`, `conformance only`, `patch only`, or `skip` and recommend based on risk:
+After implementation and final verification pass, set state to `awaiting-review-choice`. Reviews run by default: choose the risk-based selection below, announce it as the planned gate, and proceed with it; never pause merely to collect a choice. Honor a review preference already stated by the user, and allow the user to adjust the selection or explicitly decline it at any point — an explicit user decline is the only path to `skip`.
 
 - conformance for multiple contracts/packages, refactors, migrations, compatibility, or plan deviation;
 - patch review for non-trivial code, public interfaces, security/authorization, data handling, concurrency, cleanup, or external effects;
-- both when either category is high risk;
-- skip only for a small low-risk directly verified change.
+- both when either category is high risk.
 
-If skipped, record `skip`, create no review directory, and complete only after the selected path is closed.
+If the user explicitly declines, record `skip` together with their stated reason, create no review directory, and complete only after the selected path is closed. The completion report must name any skipped gate so review coverage stays visible.
 
 ## Execution-review persistence ownership
 
@@ -309,4 +308,4 @@ When resuming `awaiting-review-decision`, record the user's exact choice as sema
 
 ## Complete
 
-Mark the execution state `completed` only after all work packages, final verification, and the user-selected review path are truthfully closed. Report implemented outcome, state-file path, review directory when one exists, focused/final verification, review choice/final verdicts, and residual limitations.
+Mark the execution state `completed` only after all work packages, final verification, and the effective review path (including any explicit user decline) are truthfully closed. Report implemented outcome, state-file path, review directory when one exists, focused/final verification, review choice/final verdicts, and residual limitations.
