@@ -43,8 +43,9 @@ A compatible OpenCode environment must provide:
 - no nested subagent launch from custom workers;
 - reviewer task delegation enabled only for bounded read-only exploration, with reviewer-owned final judgment;
 - worker access consistent with the common task contract;
-- reviewer source-read-only behavior plus exact-path audit-write support when persisted reviews are used; and
-- local provider/model routing chosen by the user.
+- reviewer source-read-only behavior plus exact-path audit-write support when persisted reviews are used;
+- local provider/model routing chosen by the user; and
+- Node 18+ available to run the resolve helper; if the helper is missing or cannot run, that is a configuration-error blocker, not a silent fallback.
 
 Changing a model or provider must not require changing this adapter unless the logical OpenCode subagent interface itself changes.
 
@@ -60,10 +61,23 @@ Configuration is keyed by role so a later worker external backend can reuse the 
 
 ### Configuration discovery and priority
 
-Read, in this order:
+The dispatcher does not read or merge these files itself. It runs the helper script `skills/delegate-work/scripts/resolve-backend.mjs` (resolve the script path from this repository checkout):
 
-1. `~/.config/opencode/delegation.json` (environment default; may be absent)
-2. `~/.config/opencode/delegation.local.json` (untracked override; may be absent)
+```text
+node <checkout>/skills/delegate-work/scripts/resolve-backend.mjs \
+  --role reviewer \
+  --repo <dispatch root> \
+  --artifact <Raw Review Artifact contract value>
+```
+
+On a correction resume, also pass `--session <Session from the prior receipt>`. Route by the script's stdout JSON. Any exit 2 is a configuration-error blocker (fail closed; never fall back silently to `native` or to another backend).
+
+The script's behavior contract follows.
+
+Read, in this order (`--config-dir` defaults to `~/.config/opencode`):
+
+1. `<config-dir>/delegation.json` (environment default; may be absent)
+2. `<config-dir>/delegation.local.json` (untracked override; may be absent)
 
 Treat a missing file as an empty object. A missing local file is normal.
 
@@ -71,13 +85,15 @@ Merge per role with a shallow overlay: local role-object keys replace default ke
 
 `reviewer.backend` selects the route:
 
-- absent, or the literal `native` → use the **Subagent routing** table above with no additional machinery. This is the zero-regression path.
-- any other name → that name must exist in the merged `backends` map. Spawn the named backend as specified below.
+- absent, or the literal `native` → stdout `{"route":"native"}` (exactly one JSON line), exit 0. The dispatcher then uses the **Subagent routing** table above with no additional machinery. This is the zero-regression path.
+- any other name → that name must exist in the merged `backends` map. The script substitutes placeholders as specified below and prints `{"route":"external","command":"...","args":[...]}`.
 
 Fail closed as a configuration-error blocker (do not silently fall back to `native` or to another backend) when:
 
 - either file exists but is not valid JSON; or
 - `reviewer.backend` is set to a name other than `native` that has no definition in the merged `backends` map.
+
+The script encodes those conditions as one stderr error line, exit 2, and nothing on stdout.
 
 ### Backend definition schema
 
@@ -86,12 +102,12 @@ Each `backends.<name>` object has:
 - `command`: string
 - `args`: array of strings
 
-Placeholders, substituted by the dispatcher before spawn:
+Placeholders, substituted by the script (not by the dispatcher) in the stored backend definition:
 
-- `{repo}` → the dispatch working root in its original spelling, not a canonicalized real path
-- `{artifact}` → the contract's `Raw Review Artifact` value, substituted exactly as written (absolute or relative spelling). Lexical normalization is the runner's job, not the dispatcher's.
+- `{repo}` → the `--repo` value verbatim (the dispatch working root in its original spelling, not a canonicalized real path)
+- `{artifact}` → the `--artifact` value verbatim (the contract's `Raw Review Artifact` value, substituted exactly as written; absolute or relative spelling). Lexical normalization is the runner's job, not the script's.
 
-On a correction resume, the dispatcher appends `--session <Session from the prior receipt>` to the substituted `args`. Do not put a session flag in the stored config.
+On a correction resume, the dispatcher passes `--session <Session from the prior receipt>` to the script. The script appends `--session`, `<id>` to the END of the substituted `args`. The stored config never contains a session flag.
 
 The runner CLI frozen by this section is exactly:
 
