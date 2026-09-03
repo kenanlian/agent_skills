@@ -10,9 +10,9 @@ disable-model-invocation: true
 Plan-writing mode is active.
 
 - Before plan review begins, the ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
-- If the user selects plan review, audit artifacts may additionally be created or updated only under that review run's `.dev/plan-review/<review-run-id>/` directory.
+- Plan review runs by default after the plan is decision-complete; audit artifacts may additionally be created or updated only under that review run's `.dev/plan-review/<review-run-id>/` directory.
 - Never create, edit, delete, or rename any other working-tree file.
-- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Deterministic audit-persistence commands that only touch the authorized review directory are allowed after review is selected.
+- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Deterministic audit-persistence commands that only touch the authorized review directory are allowed once review begins.
 - Never delete or rename an existing plan file or prior review artifact.
 - Never implement the plan in this session. Execution happens later in a fresh session that starts from the saved plan.
 - Never ask for implementation approval. Plan review is a quality gate, not implementation approval.
@@ -119,7 +119,7 @@ Map every `R*` and `C*` to its `WP-*` and `V*`. Give exact focused, integration,
 
 Include only user-overridable decisions or load-bearing external assumptions. For each assumption that can become false, prescribe the fallback so execution does not need to recreate this conversation.
 
-## Finalize and offer plan review
+## Finalize and run plan review
 
 Read the complete plan and apply these gates:
 
@@ -130,13 +130,13 @@ Read the complete plan and apply these gates:
 - the main-owned integration path proves the combined behavior; and
 - a fresh implementer makes no undeclared load-bearing decision.
 
-After the plan is decision-complete, honor any review preference the user already stated. Otherwise ask whether to run `review-plan`. Recommend review for multiple affected subsystems, public interfaces, migrations or compatibility, authorization or security, billing or destructive behavior, concurrency, external side effects, rollout ordering, unverified external facts, or a large multi-package DAG. For a small low-risk change, recommend skipping while leaving the choice to the user.
+After the plan is decision-complete, run `review-plan` by default. Do not ask whether to run review; tell the user that the plan is decision-complete and review is starting, and that they may interrupt at any time to skip or stop it. Honor any review preference the user already stated, including an explicit request to skip review for this plan. For a small low-risk change, note that opting out is available, but still default to running review unless the user declines.
 
-If review is skipped, do not create plan-review artifacts.
+If review is skipped by explicit user opt-out, do not create plan-review artifacts.
 
 ## Plan-review persistence ownership
 
-When review is selected, use `audit-persistence` for mechanical persistence. The ownership split is strict:
+When review runs, use `audit-persistence` for mechanical persistence. The ownership split is strict:
 
 - **Planning agent:** live plan, finding adjudication, plan revisions, and user-facing decisions.
 - **Audit helper:** review-run directory creation, exact plan snapshots, manifest serialization, timestamps/hashes/paths, and other mechanical bookkeeping.
