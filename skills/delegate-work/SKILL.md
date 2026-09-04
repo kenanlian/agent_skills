@@ -79,6 +79,7 @@ Load exactly one active-platform reference:
 - Codex: `references/codex.md`
 - Cursor: `references/cursor.md`
 - OpenCode: `references/opencode.md`
+- Pi: `references/pi.md`
 
 The host reference owns concrete model mapping, invocation mechanics, platform-specific isolation, waiting/timeout behavior, and resume mechanics. Do not duplicate those details in plans or caller skills.
 

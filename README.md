@@ -1,6 +1,6 @@
 # Agent Skills
 
-跨 coding agent 平台共享的个人 Agent Skills 集合。仓库中的 Skill 保持平台无关；`delegate-work` 通过宿主 adapter 将统一的委派语义映射到 Codex、Cursor 和 OpenCode。
+跨 coding agent 平台共享的个人 Agent Skills 集合。仓库中的 Skill 保持平台无关；`delegate-work` 通过宿主 adapter 将统一的委派语义映射到 Codex、Cursor、OpenCode 和 Pi。
 
 ## 安装
 
@@ -64,6 +64,26 @@ reviewer       -> reviewer
 ```
 
 因此调整模型时只需要修改 OpenCode/dotfiles 配置，不需要修改 `agent_skills`。三个 worker 必须禁止继续启动嵌套 subagent；reviewer 则需要保留 task delegation，用于委派只读 explorer 进行证据收集，同时自己保留所有 review judgment。若使用持久化审查，OpenCode 的 reviewer 配置还需要支持对 task contract 中唯一 raw-review artifact 路径的窄写权限。
+
+### Pi adapter
+
+Pi 宿主使用工具 `delegate_agent`。逻辑路由保持稳定，语义角色/档位映射为同名 `agent` 参数：
+
+```text
+explorer       -> explorer
+junior worker  -> junior
+senior worker  -> senior
+expert worker  -> expert
+reviewer       -> reviewer
+```
+
+`skills/delegate-work/references/pi.md` 只定义该工具、权限两档（`read-only` / `write`）、续接与嵌套行为，不绑定具体 provider 或 model。后端与模型只由 `~/.pi/agent/delegate-agent.json` 决定。
+
+续接必须使用返回信封里的 `session_id`，禁止把宿主 `--session-id` 当作工具续接凭据。
+
+Pi 工具 schema 不接受任务契约里的 `audit-write`。持久化审查时，把契约中的 `audit-write` 翻译为 `access: write`，并在 prompt 中约束只允许写入任务契约给出的那一个 artifact 路径；不得把 `audit-write` 传进工具。源码、计划、测试、配置和其他审计文件仍禁止修改。
+
+嵌套矩阵：main 可调用五个 tier；只有 reviewer 可以再嵌套，且只能嵌套 explorer 加 `read-only`。explorer 与三个 worker 默认不能再委派。
 
 ## 计划工作流
 
