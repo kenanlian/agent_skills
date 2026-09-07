@@ -263,7 +263,7 @@ These records are semantic content owned by the execution agent. Serialize curre
 
 ## Run post-execution reviews
 
-After implementation and final verification pass, set state to `awaiting-review-choice`. Reviews run by default: choose the risk-based selection below, announce it as the planned gate, and proceed with it; never pause merely to collect a choice. Honor a review preference already stated by the user, and allow the user to adjust the selection or explicitly decline it at any point — an explicit user decline is the only path to `skip`.
+After implementation and final verification pass, set state to `awaiting-review-choice`. Reviews run by default: choose the risk-based selection below, announce it as the planned gate, and proceed with it; never pause merely to collect a choice. Honor a review preference already stated by the user, and allow the user to adjust the selection or explicitly decline it at any point — an explicit user decline is the only path to `skip`. A commissioning brief that declares an outer review gate owns patch/conformance review (for example, a card-level orchestrator whose review lane will run `review-patch` and `review-plan-conformance` independently) counts as that explicit decline: record `skip` with reason `outer review gate`, create no review directory, and complete after final verification, naming the skipped gates in the completion report.
 
 - conformance for multiple contracts/packages, refactors, migrations, compatibility, or plan deviation;
 - patch review for non-trivial code, public interfaces, security/authorization, data handling, concurrency, cleanup, or external effects;

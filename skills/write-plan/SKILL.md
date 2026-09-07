@@ -130,9 +130,9 @@ Read the complete plan and apply these gates:
 - the main-owned integration path proves the combined behavior; and
 - a fresh implementer makes no undeclared load-bearing decision.
 
-After the plan is decision-complete, run `review-plan` by default. Do not ask whether to run review; tell the user that the plan is decision-complete and review is starting, and that they may interrupt at any time to skip or stop it. Honor any review preference the user already stated, including an explicit request to skip review for this plan. For a small low-risk change, note that opting out is available, but still default to running review unless the user declines.
+After the plan is decision-complete, run `review-plan` by default — unless the commissioning brief declares that an outer review gate owns plan review (for example, a card-level orchestrator whose review lane will run `review-plan` independently). In that case finalize the plan, create no plan-review artifacts, report the exact plan path, and return control to the caller; the outer gate owns the review cycle from there. Do not ask whether to run review; tell the user that the plan is decision-complete and review is starting (or that the outer gate owns it), and that they may interrupt at any time to skip or stop it. Honor any review preference the user already stated, including an explicit request to skip review for this plan. For a small low-risk change, note that opting out is available, but still default to running review unless the user declines.
 
-If review is skipped by explicit user opt-out, do not create plan-review artifacts.
+If review is skipped by explicit user opt-out or an outer gate owns it, do not create plan-review artifacts.
 
 ## Plan-review persistence ownership
 
