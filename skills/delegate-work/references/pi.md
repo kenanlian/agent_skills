@@ -14,7 +14,6 @@ Route `explorer` by its specialized role and route workers by capability tier. E
 | `junior` worker | `junior` |
 | `senior` worker | `senior` |
 | `expert` worker | `expert` |
-| `reviewer` | `reviewer` |
 
 Backend and model are not caller choices. They come only from `~/.pi/agent/delegate-agent.json`. Plans, task DAGs, and this adapter must not name a concrete model.
 
@@ -22,19 +21,15 @@ The explorer route is a deliberate role-based exception to worker tier routing. 
 
 It is valid for multiple worker tiers to share a configured backend or model. The semantic tier remains stable even when the user's routing file changes. Change that configuration rather than callers when the preferred mapping changes.
 
-For an unclassified or unsupported Pi task, use the configured route only after assigning the semantic route; do not collapse exploration, worker reasoning, and review into one work-type-based rule.
+For an unclassified or unsupported Pi task, use the configured route only after assigning the semantic route; do not collapse exploration and worker reasoning into one work-type-based rule.
 
 ## Access
 
-The tool accepts only `read-only` and `write`.
-
-Translate a persisted-review task-contract `audit-write` into `access: write` plus a prompt constraint that the child may create or overwrite only the exact artifact path named in write ownership. Never pass `audit-write` as a tool argument. Source, plan, tests, config, manifests, execution state, and every other path remain non-writable under that constraint.
-
-A normal review with `Access: read-only` remains `read-only` at the tool. If the host cannot honor the translated write-plus-constraint for a persisted review, report a persistence blocker rather than broadening reviewer write authority or returning a large report solely for parent-side transcription.
+The tool accepts `read-only` and `write`; pass the value selected by the common task contract.
 
 ## Nesting
 
-The main agent may call all five tiers; only `reviewer` may nest, and only as `explorer` with `read-only`.
+The calling parent may launch explorers or workers. Delegated children do not launch further subagents unless a separate caller skill and host configuration explicitly grant a narrower nested contract.
 
 ## Correction and resume
 

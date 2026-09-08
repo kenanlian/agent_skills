@@ -9,13 +9,12 @@ disable-model-invocation: true
 <critical>
 Plan-writing mode is active.
 
-- Before plan review begins, the ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
-- Plan review runs by default after the plan is decision-complete; audit artifacts may additionally be created or updated only under that review run's `.dev/plan-review/<review-run-id>/` directory.
+- The ONLY file you may create or edit is the plan at `.dev/plan/<slug>-plan.md`.
 - Never create, edit, delete, or rename any other working-tree file.
-- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters. Deterministic audit-persistence commands that only touch the authorized review directory are allowed once review begins.
-- Never delete or rename an existing plan file or prior review artifact.
-- Never implement the plan in this session. Execution happens later in a fresh session that starts from the saved plan.
-- Never ask for implementation approval. Plan review is a quality gate, not implementation approval.
+- Never run state-changing commands such as commits, checkouts, installs, migrations, codegen, or formatters.
+- Never delete or rename an existing plan file.
+- Never implement or review the plan in this session. Execution and final review happen later in fresh outer-control-plane runs.
+- Never ask for implementation approval.
 </critical>
 
 ## Write an execution specification
@@ -119,7 +118,7 @@ Map every `R*` and `C*` to its `WP-*` and `V*`. Give exact focused, integration,
 
 Include only user-overridable decisions or load-bearing external assumptions. For each assumption that can become false, prescribe the fallback so execution does not need to recreate this conversation.
 
-## Finalize and run plan review
+## Finalize and hand off
 
 Read the complete plan and apply these gates:
 
@@ -130,122 +129,8 @@ Read the complete plan and apply these gates:
 - the main-owned integration path proves the combined behavior; and
 - a fresh implementer makes no undeclared load-bearing decision.
 
-After the plan is decision-complete, run `review-plan` by default — unless the commissioning brief declares that an outer review gate owns plan review (for example, a card-level orchestrator whose review lane will run `review-plan` independently). In that case finalize the plan, create no plan-review artifacts, report the exact plan path, and return control to the caller; the outer gate owns the review cycle from there. Do not ask whether to run review; tell the user that the plan is decision-complete and review is starting (or that the outer gate owns it), and that they may interrupt at any time to skip or stop it. Honor any review preference the user already stated, including an explicit request to skip review for this plan. For a small low-risk change, note that opting out is available, but still default to running review unless the user declines.
+When the plan is decision-complete, stop. Do not initiate `review-plan`, create `.dev/plan-review/` artifacts, adjudicate findings, or own review routing and retry limits. Final plan review belongs to the outer control plane, which may commission `review-plan` independently in a fresh read-only context.
 
-If review is skipped by explicit user opt-out or an outer gate owns it, do not create plan-review artifacts.
+When the same planning session is resumed with an outer-control-plane change request, treat that request as bounded revision input: verify each requested correction against the plan and repository, revise only the plan, rerun the finalization gates, and hand control back. Escalate rather than guessing when a requested correction changes a settled product decision or authorized scope.
 
-## Plan-review persistence ownership
-
-When review runs, use `audit-persistence` for mechanical persistence. The ownership split is strict:
-
-- **Planning agent:** live plan, finding adjudication, plan revisions, and user-facing decisions.
-- **Audit helper:** review-run directory creation, exact plan snapshots, manifest serialization, timestamps/hashes/paths, and other mechanical bookkeeping.
-- **`review-plan` agent:** its complete immutable raw review artifact.
-
-The planning agent must never receive a full raw review merely so it can reproduce that review into a file. The reviewer writes its own artifact before returning. The parent receives only the compact control result defined by `review-plan` and reads specific finding sections from the artifact on demand while adjudicating.
-
-## Create the plan-review run
-
-Derive `<slug>` from the plan basename by removing `.md` and then a final `-plan`. Create a new review run ID `<slug>-review-YYYYMMDD-HHmmss` using host-local time and create `.dev/plan-review/<review-run-id>/`. Never reuse, overwrite, rename, or delete an earlier review run. A later review cycle starts a new timestamped directory and links the prior run when applicable.
-
-Create `manifest.md` once before round 1. It remains a compact mutable index, not raw evidence:
-
-```markdown
----
-review_run_id: <review-run-id>
-prior_review_run: <prior review-run path or null>
-plan: <exact live plan path>
-started: <timestamp>
-completed: <timestamp or null>
-rounds: 0
-max_rounds: 3
-cycle_status: active
-completion_reason: pending
-final_verdict: pending
----
-
-# Plan review manifest
-
-## Reviewer provenance
-
-- write-plan skill version: `<reported revision or unknown>`
-- review-plan skill version: `<reported revision or unknown>`
-- main-agent model: `<host-reported identifier or unknown>`
-- main-agent reasoning configuration: `<host-reported value or unknown>`
-
-## Repository context
-
-- Baseline commit: `<sha>`
-- Relevant pre-existing changes: `<paths and notes, or None>`
-
-## Rounds
-
-- Pending
-
-## Final summary
-
-- Pending
-```
-
-Use helper field/section operations for later manifest updates instead of rereading and rewriting the complete file.
-
-## Run one plan-review round
-
-For round `N` from 1 through 3:
-
-1. Allocate the next integer round.
-2. Use an exact deterministic copy, preferably `audit-persistence copy`, to save the current live plan as immutable `round-NN-plan.md`. Never regenerate this snapshot through model output.
-3. Record current repository `HEAD` and task-relevant dirty-state summary.
-4. Dispatch an independent reviewer via `delegate-work` with:
-   - `Required skill: review-plan`;
-   - `Plan File` set to the immutable `round-NN-plan.md`, not the live plan;
-   - `Review Run ID` and `Review Round`;
-   - `Raw Review Artifact` set to `.dev/plan-review/<review-run-id>/round-NN-review.md`;
-   - source/worktree access read-only, with exclusive audit-write permission only for that raw artifact path.
-5. The reviewer must write the complete report directly to `round-NN-review.md` before returning. Treat a reviewer return without the required artifact as an incomplete dispatch that does not consume the round.
-6. Accept only the compact reviewer return: verdict, confidence, artifact path, and finding index (`PR-*`, severity, category, one-line summary). Do not request the full coverage matrix or full report in the parent response.
-7. Independently validate every reported `P0`–`P3` finding. Read only the relevant finding/evidence sections from the raw artifact when the compact return is insufficient.
-8. Write `round-NN-adjudication.md` before revising the live plan. This is new planning-agent reasoning, so the planning agent owns the content.
-
-Use this adjudication schema:
-
-```markdown
----
-review_run_id: <review-run-id>
-round: <N>
-adjudicated_at: <timestamp>
-reviewed_plan: <round-NN-plan.md>
----
-
-# Plan review adjudication
-
-### PR-01 — <short title>
-
-- Reviewer severity: `<P0-P3>`
-- Reviewer category: `<category>`
-- Materiality: `<blocking | advisory>`
-- Origin: `<original-plan | previous-review-fix | other>`
-- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
-- Reason: `<plan/repository-backed adjudication>`
-- Evidence: `<plan section plus repository anchor when applicable>`
-- Resolution: `<incorporated | no-change | needs-user-direction | pending>`
-- Revision evidence: `<changed plan section/contract/package, None, or Pending>`
-
-## Round summary
-
-- Findings: `<reported N; new material N; carried material N; confirmed advisory N; introduced by previous review fix N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
-```
-
-Do not copy the reviewer's full finding prose into adjudication. Preserve reviewer claims in the raw artifact and record only the planning agent's classification, reason, evidence, and resolution.
-
-For rounds 1 and 2, close the gate as `APPROVE` when adjudication leaves no confirmed in-scope P0–P2 finding. Otherwise revise the live plan for confirmed in-scope P0–P2 findings, update adjudication resolution/revision evidence, and rerun. P3 is advisory by default and never triggers a rerun alone.
-
-After each round, update `manifest.md` through helper field/section operations with snapshot path, raw review path, adjudication path, raw verdict/confidence, and compact adjudication counts. Never rewrite raw round evidence.
-
-After round 3, persist and adjudicate the report before further action. If no confirmed P0–P2 finding remains, close as `APPROVE`. If any remains, do not revise automatically and do not dispatch round 4; close as `max-rounds-escalated` and ask the user to choose whether to revise the governing decision or plan, accept the documented risk, stop, or authorize a substantively revised new cycle.
-
-A user-authorized new cycle starts a new timestamped review-run directory at round 1 after a material plan or decision change. Link the prior run in its manifest.
-
-If an independent reviewer is unavailable, perform the same review directly, write the raw review artifact once with provenance identifying the main agent, disclose the limitation, and continue through the same adjudication protocol. Do not create a fake reviewer round without a raw artifact.
-
-Finish by reporting the exact plan path, plan-review artifact directory when review ran, a short approach summary, and whether review was approved, skipped, escalated, or unavailable. Stop without implementation.
+Finish by reporting the exact plan path, its SHA-256, a short approach summary, verification performed while authoring the plan, and any unresolved limitations. Stop without implementation.

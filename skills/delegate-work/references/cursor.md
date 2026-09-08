@@ -14,7 +14,6 @@ Route `explorer` by its specialized role and route workers by capability tier:
 | `junior` worker | `cursor-grok-4.6-high` |
 | `senior` worker | `cursor-grok-4.6-high` |
 | `expert` worker | `claude-opus-5-thinking-high` |
-| `reviewer` | `gpt-5.6-sol-high` |
 
 The explorer route is a deliberate role-based exception to worker tier routing. It is optimized for high-coverage repository evidence gathering and remains read-only through the common task contract.
 

@@ -55,42 +55,41 @@ Updated: t0
 
 - None
 
-## Review gate
+## Handoff
 
-- User choice: pending
-- Patch review: Not selected
+- Consumer: pending
 
 ## Completion
 
 - Pending
 `);
 
-  assert.equal(run(['set-field', '--file', file, '--field', 'Status', '--value', 'fixing-review-findings']).status, 0);
+  assert.equal(run(['set-field', '--file', file, '--field', 'Status', '--value', 'blocked']).status, 0);
   assert.equal(run(['upsert-table-row', '--file', file, '--section', '## Work packages', '--key', 'WP-01', '--row', '| WP-01 | verified | senior-worker | src/a.ts | V1 pass |']).status, 0);
-  assert.equal(run(['set-list-item', '--file', file, '--section', '## Review gate', '--label', 'Patch review', '--value', 'incorrect, round 1']).status, 0);
+  assert.equal(run(['set-list-item', '--file', file, '--section', '## Handoff', '--label', 'Consumer', '--value', 'WP-02 ready']).status, 0);
   assert.equal(run(['append-section', '--file', file, '--section', '## Deviations and blockers'], '- WP-02: decision-escalation — compatibility choice requires user direction').status, 0);
 
   const content = fs.readFileSync(file, 'utf8');
-  assert.match(content, /Status: fixing-review-findings/);
+  assert.match(content, /Status: blocked/);
   assert.match(content, /\| WP-01 \| verified \| senior-worker \| src\/a\.ts \| V1 pass \|/);
-  assert.match(content, /- Patch review: incorrect, round 1/);
+  assert.match(content, /- Consumer: WP-02 ready/);
   assert.match(content, /WP-02: decision-escalation/);
   assert.doesNotMatch(content, /## Deviations and blockers\n\n- None/);
   assert.match(content, /## Completion\n\n- Pending/);
 });
 
-test('updates manifest frontmatter and replaces round placeholder on first append', () => {
+test('updates metadata frontmatter and replaces attempt placeholder on first append', () => {
   const dir = tempDir();
-  const file = path.join(dir, 'manifest.md');
+  const file = path.join(dir, 'attempts.md');
   fs.writeFileSync(file, `---
-rounds: 0
-cycle_status: active
-final_verdict: pending
+attempts: 0
+state: active
+outcome: pending
 ---
 
-# Review manifest
+# Attempt index
 
-## Rounds
+## Attempts
 
 - Pending
 
@@ -99,12 +98,12 @@ final_verdict: pending
 - Pending
 `);
 
-  assert.equal(run(['set-frontmatter', '--file', file, '--key', 'rounds', '--value', '1']).status, 0);
-  assert.equal(run(['append-section', '--file', file, '--section', '## Rounds'], '- Round 1: APPROVE; review=round-01-review.md; adjudication=round-01-adjudication.md').status, 0);
+  assert.equal(run(['set-frontmatter', '--file', file, '--key', 'attempts', '--value', '1']).status, 0);
+  assert.equal(run(['append-section', '--file', file, '--section', '## Attempts'], '- Attempt 1: completed; artifact=WP-01-attempt-01.md').status, 0);
 
   const content = fs.readFileSync(file, 'utf8');
-  assert.match(content, /^---\nrounds: 1\ncycle_status: active/m);
-  assert.match(content, /Round 1: APPROVE/);
-  assert.doesNotMatch(content, /## Rounds\n\n- Pending/);
+  assert.match(content, /^---\nattempts: 1\nstate: active/m);
+  assert.match(content, /Attempt 1: completed/);
+  assert.doesNotMatch(content, /## Attempts\n\n- Pending/);
   assert.match(content, /## Final summary\n\n- Pending/);
 });

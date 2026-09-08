@@ -1,6 +1,6 @@
 ---
 name: review-plan
-description: Review a saved implementation plan for requirement coverage, source grounding, decision completeness, work-package DAG safety, and verifiable acceptance criteria. In persisted review cycles, write the full raw review directly to the caller-provided audit artifact and return only a compact control result.
+description: Review a saved implementation plan for requirement coverage, source grounding, decision completeness, work-package DAG safety, and verifiable acceptance criteria.
 ---
 
 # Review plan
@@ -9,20 +9,19 @@ Determine whether the saved plan carries a fresh implementer from current reposi
 
 ## Inputs and authority
 
-`Plan File` is required. Read the complete file yourself; never review a summary or reconstruct a missing plan from conversation, code, or a diff. In a persisted cycle the caller should pass the immutable per-round plan snapshot rather than the mutable live plan.
+`Plan File` is required. Read the complete file yourself; never review a summary or reconstruct a missing plan from conversation, code, or a diff.
 
 Optional inputs:
 
 - `Scope`: narrowed plan sections.
 - `Custom Instructions`: explicit additional constraints.
-- `Review Run ID` and `Review Round`: persisted-cycle identity; round must be 1 through 3.
-- `Raw Review Artifact`: exact path where this reviewer must write its complete immutable report.
+- outer-control-plane review identity or round metadata needed for evidence attribution.
 
-If `Review Round` is above 3, stop without reviewing and report that the cycle requires user direction. If the plan is missing or unreadable, stop and ask for the exact path.
+If the plan is missing or unreadable, stop and report the exact missing input.
 
-Remain source-read-only: do not edit the plan, product code, tests, configuration, or any other workspace file; do not run builds/tests or state-changing commands. When `Raw Review Artifact` is provided, you have exclusive write authority only for that one new audit file. Do not write any other audit file, manifest, snapshot, or adjudication. The caller owns adjudication and live-plan revision.
+Remain source-read-only: do not edit the plan, product code, tests, configuration, or any other workspace file; do not run builds/tests or state-changing commands. Return the complete review to the caller; the outer control plane owns persistence, verdict routing, adjudication, plan revision, and retry limits.
 
-The reviewing agent owns every severity and the raw verdict. Explorers locate and trace evidence but never decide whether the plan passes.
+This reviewing agent owns every severity and its review verdict. Explorers locate and trace evidence but never decide whether the plan passes.
 
 ## Build the coverage model
 
@@ -108,50 +107,6 @@ The complete report contains:
 
 If material coverage is incomplete because required evidence is unavailable, return `REVISE` and identify the uncovered area. Missing non-load-bearing detail does not force revision.
 
-## Persisted-cycle output protocol
+## Return
 
-When `Raw Review Artifact` is supplied:
-
-1. Complete the review first.
-2. Write the full raw report directly to that exact path before returning. The artifact is immutable after return.
-3. Include provenance frontmatter so later audit can distinguish the reviewed input and reviewer environment:
-
-```markdown
----
-review_run_id: <provided review-run-id>
-round: <N>
-reviewed_plan: <exact Plan File>
-repository_head: <sha>
-reviewer_skill_version: <reported revision or unknown>
-reviewer_model: <host-reported identifier or unknown>
-reviewer_reasoning: <host-reported value or unknown>
-started: <timestamp>
-completed: <timestamp>
-verdict: <APPROVE | REVISE>
-confidence: <0.0-1.0>
----
-
-# Raw plan review
-
-<complete raw report>
-```
-
-Do not return the complete report to the parent after it has been persisted. Return only this compact control result:
-
-```text
-Outcome: review completed
-Verdict: <APPROVE | REVISE>
-Confidence: <0.0-1.0>
-Artifact: <Raw Review Artifact>
-Findings:
-- PR-01 | <P0-P3> | <category> | <one-line summary>
-- ...
-Coverage summary: <covered N; missing N; unverifiable N>
-Evidence limitations: <one-line summary or None>
-```
-
-The compact finding index must include every reported P0–P3 finding so the caller can adjudicate without loading the full coverage matrix. Keep each summary to one line; evidence and suggestions remain in the artifact and are read on demand.
-
-If the artifact write fails, report the persistence failure and do not claim the review round completed. Do not send the full report merely so the caller can persist it for you.
-
-When `Raw Review Artifact` is not supplied, behave as a standalone advisory reviewer and return the full raw report normally; do not create audit files on your own.
+Return the complete report directly to the outer control plane. Do not create review artifacts, manifests, snapshots, adjudication files, or retry state. Include every P0–P3 finding and the full coverage matrix so the caller can route the review without reconstructing omitted evidence.

@@ -1,6 +1,6 @@
 ---
 name: review-plan-conformance
-description: Verify that an implementation delivers the behavior promised by a saved plan. In persisted review cycles, write the full raw conformance report directly to the caller-provided audit artifact and return only a compact control result.
+description: Verify that an implementation delivers the behavior promised by a saved plan.
 ---
 
 # Review plan conformance
@@ -9,21 +9,11 @@ Determine whether an implementation delivers the behavior its plan promised. Jud
 
 ## Inputs and authority
 
-`Plan File` is required. Review the current workspace and uncommitted changes unless the caller names a different repository or diff range. Optional inputs:
+`Plan File` is required. Review the current workspace and uncommitted changes unless the caller names a different repository or diff range. Useful exact inputs include `Scope`, `Custom Instructions`, `Review Scope`, `Reviewed Head`, `Diff Base`, and `Diff Head`; outer-control-plane run or round metadata may be included for evidence attribution.
 
-- `Scope`
-- `Custom Instructions`
-- `Execution ID`
-- `Review Round` from 1 through 3
-- `Review Scope`: `workspace | commit-range | workspace-and-commits`
-- `Reviewed Head`
-- `Diff Base`
-- `Diff Head`
-- `Raw Review Artifact`: exact path for the immutable full report
+If the plan is missing or unreadable, stop and report the exact missing input. Never substitute an inferred plan.
 
-If `Review Round` is above 3, stop without reviewing and report that the cycle requires user direction. If the plan is missing or unreadable, stop and ask for it. Never substitute an inferred plan.
-
-Remain source-read-only: do not edit implementation files, tests, configuration, or the plan; do not run builds/tests or state-changing commands. When `Raw Review Artifact` is provided, you have exclusive write authority only for that one new audit file. Do not update manifests, execution state, adjudication, or any other audit artifact. The caller owns persistence outside the raw report, adjudication, fixes, and reruns.
+Remain source-read-only: do not edit implementation files, tests, configuration, or the plan; do not run builds/tests or state-changing commands. Return the complete review to the caller; the outer control plane owns persistence, verdict routing, fixes, and retry limits.
 
 ## Scope
 
@@ -97,55 +87,8 @@ The complete report contains:
 6. **Out-of-plan changes:** changes no contract explains, listed without judging correctness.
 7. Delegated evidence used and evidence limitations.
 
-Preserve the full contract coverage table in the raw artifact even though only violations need to return to the parent control plane.
+Preserve the full contract coverage table in the returned report; the outer control plane needs both violations and satisfied-contract evidence.
 
-## Persisted-cycle output protocol
+## Return
 
-When `Raw Review Artifact` is supplied:
-
-1. Complete the review.
-2. Write the entire raw report directly to that exact path before returning. The artifact becomes immutable after return.
-3. Include provenance frontmatter:
-
-```markdown
----
-execution_id: <provided execution id>
-round: <N>
-reviewer: review-plan-conformance
-reviewed_head: <sha>
-review_scope: <workspace | commit-range | workspace-and-commits>
-diff_base: <sha/ref or null>
-diff_head: <sha/ref or WORKTREE>
-reviewer_skill_sha256: <digest or unknown>
-reviewer_model: <host-reported identifier or unknown>
-reviewer_reasoning: <host-reported value or unknown>
-started: <timestamp>
-completed: <timestamp>
-verdict: <CONFORMS | DIVERGES | INCOMPLETE>
-confidence: <0.0-1.0>
----
-
-# Raw plan conformance review
-
-<complete raw report>
-```
-
-Do not return the full coverage table after it has been persisted. Return only:
-
-```text
-Outcome: review completed
-Verdict: <CONFORMS | DIVERGES | INCOMPLETE>
-Confidence: <0.0-1.0>
-Artifact: <Raw Review Artifact>
-Violations:
-- <contract-id> | <violation type> | <one-line summary>
-- ...
-Coverage summary: <satisfied N; satisfied-differently N; violated N; unverifiable N>
-Evidence limitations: <one-line summary or None>
-```
-
-The compact violation index must include every `violated` contract. Do not return satisfied-contract evidence to the parent; it remains in the artifact for audit and on-demand reads.
-
-If the raw artifact write fails, report the persistence failure and do not claim the round completed. Do not send the full report merely so the caller can persist it for you.
-
-When `Raw Review Artifact` is not supplied, behave as a standalone advisory reviewer and return the full report normally; do not create audit files.
+Return the complete report directly to the outer control plane. Do not create review artifacts, manifests, execution state, adjudication files, or retry state. Include the full contract coverage table, every violation, accepted deviation, out-of-plan change, and evidence limitation so the caller can route the review without reconstructing omitted evidence.

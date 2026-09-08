@@ -1,6 +1,6 @@
 ---
 name: review-patch
-description: Review a code patch for introduced correctness, integration, security, and test defects. In persisted review cycles, write the full raw review directly to the caller-provided audit artifact and return only a compact control result.
+description: Review a code patch for introduced correctness, integration, security, and test defects.
 ---
 
 # Review patch
@@ -9,19 +9,11 @@ Identify patch-introduced bugs that are reachable and have concrete user or syst
 
 ## Inputs and authority
 
-The caller supplies the implementation scope as a workspace, diff, or commit range plus the intended behavior. Optional persisted-cycle inputs are:
+The caller supplies the implementation scope as a workspace, diff, or commit range plus the intended behavior. Useful exact inputs include `Review Scope`, `Reviewed Head`, `Diff Base`, and `Diff Head`; outer-control-plane run or round metadata may be included for evidence attribution.
 
-- `Execution ID`
-- `Review Round` from 1 through 3
-- `Review Scope`: `workspace | commit-range | workspace-and-commits`
-- `Reviewed Head`
-- `Diff Base`
-- `Diff Head`
-- `Raw Review Artifact`: exact path for the immutable full report
+If the scope or intended behavior is missing or ambiguous, stop and report the exact missing input. Perform one review and never initiate a rerun yourself.
 
-If `Review Round` is above 3, stop without reviewing and report that the cycle requires user direction. If omitted, perform one standalone review and never initiate a rerun yourself.
-
-Remain source-read-only: do not edit implementation files, tests, configuration, plans, or any other workspace file; do not run builds/tests or state-changing commands. When `Raw Review Artifact` is provided, you have exclusive write authority only for that one new audit file. Do not update manifests, execution state, adjudication, or any other audit artifact. The caller owns persistence outside this raw report, adjudication, fixes, and reruns.
+Remain source-read-only: do not edit implementation files, tests, configuration, plans, or any other workspace file; do not run builds/tests or state-changing commands. Return the complete review to the caller; the outer control plane owns persistence, verdict routing, fixes, and retry limits.
 
 ## Scope
 
@@ -88,52 +80,6 @@ For every finding provide:
 
 End with overall verdict `correct` or `incorrect`, a 1–3 sentence explanation, and confidence from 0.0 to 1.0. If no finding meets threshold, say so explicitly.
 
-## Persisted-cycle output protocol
+## Return
 
-When `Raw Review Artifact` is supplied:
-
-1. Complete the review.
-2. Write the entire raw report directly to that exact path before returning. The artifact becomes immutable after return.
-3. Include provenance frontmatter:
-
-```markdown
----
-execution_id: <provided execution id>
-round: <N>
-reviewer: review-patch
-reviewed_head: <sha>
-review_scope: <workspace | commit-range | workspace-and-commits>
-diff_base: <sha/ref or null>
-diff_head: <sha/ref or WORKTREE>
-reviewer_skill_sha256: <digest or unknown>
-reviewer_model: <host-reported identifier or unknown>
-reviewer_reasoning: <host-reported value or unknown>
-started: <timestamp>
-completed: <timestamp>
-verdict: <correct | incorrect>
-confidence: <0.0-1.0>
----
-
-# Raw patch review
-
-<complete raw report>
-```
-
-Do not return the full report after it has been persisted. Return only:
-
-```text
-Outcome: review completed
-Verdict: <correct | incorrect>
-Confidence: <0.0-1.0>
-Artifact: <Raw Review Artifact>
-Findings:
-- RP-01 | <P0-P3> | <category> | <one-line summary>
-- ...
-Evidence limitations: <one-line summary or None>
-```
-
-The compact finding index must include every P0–P3 finding. Keep summaries to one line; trigger, evidence, impact, and remedy remain in the artifact for on-demand parent reads.
-
-If the raw artifact write fails, report the persistence failure and do not claim the round completed. Do not send the full report merely so the caller can persist it for you.
-
-When `Raw Review Artifact` is not supplied, behave as a standalone advisory reviewer and return the full report normally; do not create audit files.
+Return the complete report directly to the outer control plane. Do not create review artifacts, manifests, execution state, adjudication files, or retry state. Include every P0–P3 finding with its trigger, evidence, impact, and remedy so the caller can route the review without reconstructing omitted evidence.

@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave acceptance, integration, and default-on conformance and patch review through completion, adjustable only by explicit user decline.
+description: Execute a saved self-contained plan through its work-package DAG with bounded subagent delegation, persistent execution state, per-wave acceptance, integration, and final verification.
 disable-model-invocation: true
 ---
 
@@ -12,8 +12,8 @@ Before implementation work or codebase exploration, read the exact plan file sup
 - Treat the saved plan as the semantic source of truth. Conversation summaries are secondary.
 - If the path is unknown, missing, or unreadable, stop and request the exact path. Do not guess or reconstruct it.
 - Never silently redesign a load-bearing behavior, interface, data, compatibility, security, or rollout decision.
-- Continue until every package, verification step, and the effective review gate is complete unless a genuine blocker needs user information or authority.
-- Use `audit-persistence` for mechanical audit/state mutation. Do not reread and rewrite large state, manifest, snapshot, or raw-review files when a deterministic helper operation can update them.
+- Continue until every package and verification step is complete unless a genuine blocker needs user information or authority.
+- Use `audit-persistence` for mechanical execution-state mutation. Do not reread and rewrite large state or result artifacts when a deterministic helper operation can update them.
 </critical>
 
 ## Preflight the plan and repository
@@ -36,9 +36,9 @@ Every execution has a durable state file in the plan's `.dev/plan/` directory. D
 
 Before creating it, list matching states:
 
-- If exactly one state with the same plan path and SHA-256 is active (`in-progress`, `awaiting-review-choice`, `fixing-review-findings`, `awaiting-review-decision`, or `blocked`), read that compact state completely once, verify plan path/SHA, restore DAG status from the WP table, read latest result artifacts by pointer when needed, then resume. Do not rebuild old worker conversations.
+- If exactly one state with the same plan path and SHA-256 is active (`in-progress` or `blocked`), read that compact state completely once, verify plan path/SHA, restore DAG status from the WP table, read latest result artifacts by pointer when needed, then resume. Do not rebuild old worker conversations.
 - If more than one matching active state exists, stop and report all paths.
-- If only completed states match, verify current contracts still hold. Report already-completed when they do; treat later material drift as requiring plan revision.
+- If only completed states match, verify current contracts still hold. Report already-completed when they do. Exception: when the same execution session is resumed with an outer-control-plane change request tied to this plan and implementation lineage, reopen the matching state as `in-progress`, apply only authorized corrections, rerun affected focused checks plus final verification, and complete the state again. Treat later material drift or a change that invalidates the plan as requiring plan revision.
 - If none matches, create a new timestamped state. A changed plan SHA-256 always starts a new state and never overwrites older records.
 
 Legacy 5-column WP tables (no Attempt / Result artifact columns) continue to completion without mid-run migration. Detect a legacy execution when the resumed WP table lacks those columns. New executions, including a new state after a plan SHA change, use the 6-column schema below. `upsert-table-row` must work for both column counts.
@@ -53,7 +53,7 @@ Pointer dispatch and canonical-heading fallback still apply: they do not require
 
 Create the state after capturing the pre-execution working tree so the state file itself is recognized as expected. Keep the plan immutable during execution.
 
-Execution state is current recovery/control state, not an execution narrative. Keep it permanently and never rename or delete it. Detailed history lives in worker Result Artifacts, review artifacts, and the repository.
+Execution state is current recovery/control state, not an execution narrative. Keep it permanently and never rename or delete it. Detailed history lives in worker Result Artifacts and the repository.
 
 Use this canonical structure:
 
@@ -65,7 +65,7 @@ Plan SHA-256: `<digest>`
 Execution artifacts: `.dev/execution/<execution-id>/`
 Started: `<timestamp>`
 Updated: `<timestamp>`
-Status: `in-progress | awaiting-review-choice | fixing-review-findings | awaiting-review-decision | blocked | completed`
+Status: `in-progress | blocked | completed`
 
 ## Baseline
 
@@ -88,28 +88,18 @@ Status: `in-progress | awaiting-review-choice | fixing-review-findings | awaitin
 
 - Pending
 
-## Review gate
-
-- User choice: pending
-- Review artifact directory: Not created
-- Review cycle: Not selected
-- Conformance review: Not selected
-- Patch review: Not selected
-
 ## Completion
 
 - Pending
 ```
 
-A work-package row stores only status, latest attempt, executor, latest result artifact, and compact verification status. Do not accumulate implementation narratives, command stdout, changed-symbol detail, superseded worker results, or raw review content in the state file.
+A work-package row stores only status, latest attempt, executor, latest result artifact, and compact verification status. Do not accumulate implementation narratives, command stdout, changed-symbol detail, or superseded worker results in the state file.
 
 `## Active deviations and blockers` (or the legacy `## Deviations and blockers` heading if that is what the file has) stores only items that still affect the next step. After a blocker is resolved, remove it with `replace-section` on that existing heading; do not keep a resolved narrative for audit completeness.
 
-Review-gate fields stay compact pointers, for example `incorrect, round 1` plus the review directory. Do not copy finding or adjudication prose into execution state.
-
 ### State ownership and serialization
 
-The execution agent owns all semantic execution records: drift decisions, package status judgments, blockers, deviations, corrective actions, verification interpretations, user decisions, review-gate decisions, and completion claims. `audit-persistence` owns how those records are serialized into the existing state file.
+The execution agent owns all semantic execution records: drift decisions, package status judgments, blockers, deviations, corrective actions, verification interpretations, user decisions, completion claims. `audit-persistence` owns how those records are serialized into the existing state file.
 
 After initialization, do not repeatedly load the entire state merely to edit it, and never rewrite the complete state file to update one row. Prefer narrow helper operations:
 
@@ -118,7 +108,6 @@ After initialization, do not repeatedly load the entire state merely to edit it,
 - `append-section` for a newly active deviation, blocker, or user decision, targeting the deviations heading already in the file;
 - `replace-section` to set that same deviations heading to the remaining active items, or `- None`;
 - `replace-section` or `append-section` for integration/final-verification records;
-- `set-list-item` for compact review-gate fields.
 
 A helper must never invent semantic content. The execution agent supplies the exact concise record to serialize. If a complex transition requires reading existing state for reasoning, read the relevant section; do not rewrite unrelated sections through model output.
 
@@ -166,7 +155,7 @@ Attempt numbers are assigned by Main before dispatch:
 
 Write ownership includes the exact Result Artifact path only, not `.dev/execution/**`.
 
-`.dev/execution/` is git-versioned with plan and review artifacts (via the existing `.dev` store) and retained permanently. Do not gitignore it. It is execution evidence, unlike `delegations/` (temporary relay, gitignored).
+`.dev/execution/` is git-versioned with the plan artifacts (via the existing `.dev` store) and retained permanently. Do not gitignore it. It is execution evidence, unlike `delegations/` (temporary relay, gitignored).
 
 Suggested work-artifact shape:
 
@@ -247,7 +236,7 @@ For each package, the main execution agent performs an acceptance gate rather th
 - record executor, latest attempt, result artifact pointer, and compact verification status through narrow state-helper operations; and
 - never release a consumer based only on a subagent completion claim.
 
-A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting belongs to `review-patch`, and complete plan-contract coverage belongs to `review-plan-conformance` when those review gates are selected.
+A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting and complete plan-contract coverage belong to the outer review control plane after this skill returns.
 
 After all packages are verified, run the plan's integration and end-to-end checks. Confirm every `R → C → WP → V` path and requested observable behavior. Record complete commands and observed results. Build/typecheck alone is insufficient when new behavior is promised.
 
@@ -261,166 +250,10 @@ Before acting on a material risk, classify it:
 
 These records are semantic content owned by the execution agent. Serialize currently active items into the deviations heading that already exists in the state file without reproducing the rest of the file.
 
-## Run post-execution reviews
+## Complete and hand off
 
-After implementation and final verification pass, set state to `awaiting-review-choice`. Reviews run by default: choose the risk-based selection below, announce it as the planned gate, and proceed with it; never pause merely to collect a choice. Honor a review preference already stated by the user, and allow the user to adjust the selection or explicitly decline it at any point — an explicit user decline is the only path to `skip`. A commissioning brief that declares an outer review gate owns patch/conformance review (for example, a card-level orchestrator whose review lane will run `review-patch` and `review-plan-conformance` independently) counts as that explicit decline: record `skip` with reason `outer review gate`, create no review directory, and complete after final verification, naming the skipped gates in the completion report.
+Mark the execution state `completed` only after all work packages and final verification are truthfully closed. Do not initiate `review-patch` or `review-plan-conformance`, create `.dev/review/` artifacts, adjudicate findings, or own review routing and retry limits. Final patch and plan-conformance review belong to the outer control plane, which may commission those review skills independently in fresh read-only contexts.
 
-- conformance for multiple contracts/packages, refactors, migrations, compatibility, or plan deviation;
-- patch review for non-trivial code, public interfaces, security/authorization, data handling, concurrency, cleanup, or external effects;
-- both when either category is high risk.
+When the same execution session is resumed with an outer-control-plane change request, treat it as bounded correction input: verify it against the accepted plan, make only authorized fixes, rerun affected focused checks plus final verification, update the existing execution state and result evidence, and hand control back. Escalate rather than guessing when the request changes product behavior, scope, architecture, data, security, compatibility, or another settled contract.
 
-If the user explicitly declines, record `skip` together with their stated reason, create no review directory, and complete only after the selected path is closed. The completion report must name any skipped gate so review coverage stays visible.
-
-## Execution-review persistence ownership
-
-When at least one review is selected, derive `<execution-id>` from the execution-state basename and create:
-
-```text
-.dev/review/<execution-id>/
-```
-
-Use `audit-persistence` for directory/file initialization and mutable manifest/state bookkeeping.
-
-Ownership is strict:
-
-- **Execution agent:** adjudication, review-driven fix decisions, user escalation, and execution-state semantic records.
-- **Audit helper:** manifest serialization, timestamps/hashes/paths, review-cycle fields, and other mechanical bookkeeping.
-- **`review-patch` agent:** its complete immutable `round-NN-review-patch.md` raw report.
-- **`review-plan-conformance` agent:** its complete immutable `round-NN-plan-conformance.md` raw report.
-
-Do **not** create a reviewed-patch snapshot. For current audit requirements, record repository `HEAD`, review scope, and diff base/head metadata only. A worktree review may not be exactly reconstructible later; that precision is intentionally out of scope.
-
-The execution agent must never receive full raw reviewer output merely so it can reproduce it into a file. Reviewers write their own artifacts and return compact control results.
-
-## Review manifest
-
-Create `manifest.md` once before round 1:
-
-```markdown
----
-execution_id: <execution-id>
-prior_review_directory: <prior review directory or null>
-execution_state: <exact state path>
-plan: <exact plan path>
-plan_sha256: <digest>
-baseline_commit: <sha>
-review_choice: <both | conformance-only | patch-only>
-started: <timestamp>
-completed: <timestamp or null>
-rounds: 0
-max_rounds: 3
-cycle_status: active
-completion_reason: pending
-gate_outcome: pending
-final_patch_verdict: <correct | incorrect | not-selected | pending>
-final_conformance_verdict: <CONFORMS | DIVERGES | INCOMPLETE | not-selected | pending>
----
-
-# Review manifest
-
-## Reviewer provenance
-
-- execute-plan skill SHA-256: `<digest or unknown>`
-- review-patch skill SHA-256: `<digest, unknown, or not-selected>`
-- review-plan-conformance skill SHA-256: `<digest, unknown, or not-selected>`
-- main-agent model: `<host-reported identifier or unknown>`
-- main-agent reasoning configuration: `<host-reported value or unknown>`
-
-## Rounds
-
-- Pending
-
-## Final summary
-
-- Pending
-```
-
-Use helper frontmatter/section operations for subsequent updates. Do not reread and rewrite the whole manifest after every round.
-
-## Run one execution-review round
-
-For round `N` from 1 through 3:
-
-1. Allocate the next integer round.
-2. Record current `HEAD`, review scope (`workspace | commit-range | workspace-and-commits`), and applicable `diff_base`/`diff_head`. Do not snapshot the patch.
-3. When patch review is selected, dispatch via `delegate-work` with `Required skill: review-patch`, the exact implementation scope and intended behavior, round/repository metadata, and `Raw Review Artifact: .dev/review/<execution-id>/round-NN-review-patch.md`.
-4. When conformance review is selected, dispatch with `Required skill: review-plan-conformance`, exact plan path plus implementation scope, round/repository metadata, and `Raw Review Artifact: .dev/review/<execution-id>/round-NN-plan-conformance.md`.
-5. When both are selected, launch them independently and concurrently. Each reviewer is source/worktree read-only with exclusive audit-write permission only for its own raw artifact path.
-6. Each reviewer must persist its full report before returning. A return without the required artifact is incomplete and does not consume the round.
-7. Accept only compact control results:
-   - patch: verdict/confidence/artifact plus every `RP-*` ID, priority, category, one-line summary;
-   - conformance: verdict/confidence/artifact plus every violated contract ID/type/one-line summary and aggregate coverage counts.
-8. Do not load full satisfied-contract coverage or full finding prose into the parent context. Read only specific raw-artifact sections needed to adjudicate a reported issue.
-9. After all selected reviewers have returned, independently validate every patch finding and conformance violation and write `round-NN-adjudication.md` before fixes.
-
-## Adjudication
-
-Adjudication is new execution-agent reasoning, so it remains owned by the execution agent rather than the helper or reviewer. Include one entry for every reported `RP-*` finding and every `violated` conformance contract:
-
-```markdown
----
-execution_id: <execution-id>
-round: <N>
-adjudicated_at: <timestamp>
-head_before_fixes: <sha>
----
-
-# Review adjudication
-
-## Patch findings
-
-### RP-01 — <title>
-
-- Reviewer category: `<category>`
-- Reviewer priority: `<P0-P3>`
-- Materiality: `<blocking | advisory>`
-- Origin: `<implementation | previous-review-fix | pre-existing | other>`
-- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
-- Reason: `<repository-backed adjudication>`
-- Evidence: `<file:line or other concrete evidence>`
-- Resolution: `<fixed | no-change | needs-user-direction | pending>`
-- Fix evidence: `<changed file/check, None, or Pending>`
-
-## Conformance violations
-
-### <contract-id> — <short description>
-
-- Violation type: `<reviewer-provided type>`
-- Materiality: `<blocking | advisory>`
-- Origin: `<implementation | previous-review-fix | pre-existing | other>`
-- Status: `<confirmed | rejected | duplicate | out-of-scope | unverifiable>`
-- Reason: `<repository-backed adjudication>`
-- Evidence: `<file:line or other concrete evidence>`
-- Resolution: `<fixed | no-change | needs-user-direction | pending>`
-- Fix evidence: `<changed file/check, None, or Pending>`
-
-## Round summary
-
-- Patch: `<reported N; confirmed material N; confirmed advisory N; introduced by previous review fix N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
-- Conformance: `<reported violations N; confirmed material N; confirmed advisory N; introduced by previous review fix N; rejected N; duplicate N; out-of-scope N; unverifiable N>`
-```
-
-Do not copy the full raw reviewer prose into adjudication. Reviewer claims remain in immutable raw artifacts; adjudication records the execution agent's classification and resolution.
-
-Update the review manifest after each round through helper operations with raw artifact paths, adjudication path, verdicts/confidence, repository metadata, and compact counts. Update execution-state review-gate fields through `set-list-item` rather than whole-file rewriting. Keep those fields as compact pointers (verdict, round, directory); do not copy findings or adjudication into execution state.
-
-## Fix and rerun
-
-One review cycle permits at most three completed rounds. When both reviews are selected, both reports belong to the same round. Never dispatch round 4.
-
-For rounds 1 and 2:
-
-- if adjudication leaves no confirmed material finding, set `gate_outcome: passed` and close;
-- otherwise set execution state to `fixing-review-findings`, automatically fix confirmed material findings that stay within the authorized plan, rerun focused/final verification, update resolution evidence, then start the next round;
-- do not fix P3 advisories merely to close the gate and never rerun solely for them;
-- ask the user before any correction that changes product/architecture decisions, expands scope, needs new authority, or adds an external effect.
-
-After round 3, persist and adjudicate every selected report. If no confirmed material finding remains, close as passed. If any confirmed P0–P2 patch finding or material conformance violation remains, do not auto-fix and do not rerun. Set state to `awaiting-review-decision`, set manifest `gate_outcome: awaiting-user-decision`, `cycle_status: max-rounds-escalated`, `completion_reason: max-rounds`, and ask the user for direction.
-
-A user-authorized substantively revised new cycle uses a new `.dev/review/<execution-id>-retry-YYYYMMDD-HHmmss/` directory, starts at round 1, links the prior directory, and gets its own three-round maximum. Do not create it merely to retry an unchanged third-round state.
-
-When resuming `awaiting-review-decision`, record the user's exact choice as semantic execution-state content before acting. If the user authorizes an in-scope fix without independent rereview, fix and verify it, record the residual limitation, and complete. If the user accepts risk, record it and complete with that limitation. If the user requests a revised plan, remain blocked. If the user stops, record that the selected gate did not pass.
-
-## Complete
-
-Mark the execution state `completed` only after all work packages, final verification, and the effective review path (including any explicit user decline) are truthfully closed. Report implemented outcome, state-file path, review directory when one exists, focused/final verification, review choice/final verdicts, and residual limitations.
+Report the implemented outcome, execution-state path, changed files, focused and final verification with observed results, contract deviations, blockers, and residual limitations. Preserve the exact implementation session and artifact pointers needed by the outer control plane for any later rework.
