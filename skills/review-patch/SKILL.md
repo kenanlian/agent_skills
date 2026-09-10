@@ -7,6 +7,12 @@ description: Review a code patch for introduced correctness, integration, securi
 
 Identify patch-introduced bugs that are reachable and have concrete user or system impact. Review the patch first, then read sufficient surrounding code to prove each finding.
 
+This standalone Skill is not used as a separate Relay by the managed
+`development-stage.v2` execute workflow. That workflow commissions
+`review-execute-candidate`, which incorporates this Patch Gate alongside an independent
+Plan Conformance Gate. Keep using this Skill for callers that explicitly need patch-only
+review outside that workflow.
+
 ## Inputs and authority
 
 The caller supplies the implementation scope as a workspace, diff, or commit range plus the intended behavior. Useful exact inputs include `Review Scope`, `Reviewed Head`, `Diff Base`, and `Diff Head`; outer-control-plane run or round metadata may be included for evidence attribution.

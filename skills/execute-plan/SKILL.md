@@ -236,7 +236,7 @@ For each package, the main execution agent performs an acceptance gate rather th
 - record executor, latest attempt, result artifact pointer, and compact verification status through narrow state-helper operations; and
 - never release a consumer based only on a subagent completion claim.
 
-A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting and complete plan-contract coverage belong to the outer review control plane after this skill returns.
+A package marked `verified` has passed this dependency-release acceptance gate; it does not mean the main execution agent independently proved every changed hunk correct or performed full plan-conformance analysis. Patch-level defect hunting and complete plan-contract coverage belong to the outer merged review control plane after this skill returns.
 
 After all packages are verified, run the plan's integration and end-to-end checks. Confirm every `R → C → WP → V` path and requested observable behavior. Record complete commands and observed results. Build/typecheck alone is insufficient when new behavior is promised.
 
@@ -252,7 +252,7 @@ These records are semantic content owned by the execution agent. Serialize curre
 
 ## Complete and hand off
 
-Mark the execution state `completed` only after all work packages and final verification are truthfully closed. Do not initiate `review-patch` or `review-plan-conformance`, create `.dev/review/` artifacts, adjudicate findings, or own review routing and retry limits. Final patch and plan-conformance review belong to the outer control plane, which may commission those review skills independently in fresh read-only contexts.
+Mark the execution state `completed` only after all work packages and final verification are truthfully closed. Do not initiate `review-execute-candidate`, `review-patch`, or `review-plan-conformance`, create `.dev/review/` artifacts, adjudicate findings, or own review routing and retry limits. The managed development workflow commissions one fresh read-only `review-execute-candidate` after this Skill returns; that merged reviewer preserves independent Patch and Plan Conformance gates. The legacy split review Skills remain available only to callers outside that managed workflow.
 
 When the same execution session is resumed with an outer-control-plane change request, treat it as bounded correction input: verify it against the accepted plan, make only authorized fixes, rerun affected focused checks plus final verification, update the existing execution state and result evidence, and hand control back. Escalate rather than guessing when the request changes product behavior, scope, architecture, data, security, compatibility, or another settled contract.
 

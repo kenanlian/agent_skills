@@ -7,6 +7,12 @@ description: Verify that an implementation delivers the behavior promised by a s
 
 Determine whether an implementation delivers the behavior its plan promised. Judge intent, not wording: a plan is implemented when the system now behaves as promised, regardless of internal names and structures used.
 
+This standalone Skill is not used as a separate Relay by the managed
+`development-stage.v2` execute workflow. That workflow commissions
+`review-execute-candidate`, which incorporates this Plan Conformance Gate alongside an
+independent Patch Gate. Keep using this Skill for callers that explicitly need
+conformance-only review outside that workflow.
+
 ## Inputs and authority
 
 `Plan File` is required. Review the current workspace and uncommitted changes unless the caller names a different repository or diff range. Useful exact inputs include `Scope`, `Custom Instructions`, `Review Scope`, `Reviewed Head`, `Diff Base`, and `Diff Head`; outer-control-plane run or round metadata may be included for evidence attribution.

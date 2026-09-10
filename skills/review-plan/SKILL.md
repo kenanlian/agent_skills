@@ -15,7 +15,8 @@ Optional inputs:
 
 - `Scope`: narrowed plan sections.
 - `Custom Instructions`: explicit additional constraints.
-- outer-control-plane review identity or round metadata needed for evidence attribution.
+- outer-control-plane review identity needed for evidence attribution: board, Card id,
+  feature id, current review run id, round, exact Plan path, and Plan SHA-256.
 
 If the plan is missing or unreadable, stop and report the exact missing input.
 
@@ -109,4 +110,32 @@ If material coverage is incomplete because required evidence is unavailable, ret
 
 ## Return
 
-Return the complete report directly to the outer control plane. Do not create review artifacts, manifests, snapshots, adjudication files, or retry state. Include every P0–P3 finding and the full coverage matrix so the caller can route the review without reconstructing omitted evidence.
+Return the complete report directly to the outer control plane as exactly one YAML document
+without a Markdown fence. Do not create review artifacts, manifests, snapshots, adjudication
+files, or retry state. The caller persists and identity-binds this response.
+
+```yaml
+schema: development-plan-review.v1
+board: <exact supplied slug or null>
+card_id: <exact supplied id or null>
+feature_id: <exact supplied id or null>
+review_run_id: <exact supplied integer or null>
+round: <exact supplied integer or null>
+plan:
+  path: <exact absolute path>
+  sha256: <verified digest>
+verdict: pass | revise
+summary: <1-3 sentences>
+confidence: <0.0-1.0>
+coverage: []
+required_revisions: []
+non_blocking_risks: []
+evidence_checked: []
+delegated_evidence: []
+evidence_limitations: []
+```
+
+Map native `APPROVE` to `verdict: pass` and `REVISE` to `verdict: revise`. Include every
+P0–P3 finding and the full `R → C → WP → V` coverage in the corresponding arrays so the
+outer control plane never reconstructs omitted evidence. Preserve every supplied identity
+literally; do not infer or normalize it.
