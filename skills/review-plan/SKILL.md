@@ -20,7 +20,7 @@ Optional inputs:
 
 If the plan is missing or unreadable, stop and report the exact missing input.
 
-Remain source-read-only: do not edit the plan, product code, tests, configuration, or any other workspace file; do not run builds/tests or state-changing commands. Return the complete review to the caller; the outer control plane owns persistence, verdict routing, adjudication, plan revision, and retry limits.
+Remain source-read-only: do not edit the plan, product code, tests, configuration, or any other workspace file; do not run builds/tests or state-changing commands. Finish by calling `submit_plan_review` with the typed payload below; the tool validates and terminates, and the outer control plane persists, identity-binds, routes the verdict, adjudicates, revises the plan, and enforces retry limits.
 
 This reviewing agent owns every severity and its review verdict. Explorers locate and trace evidence but never decide whether the plan passes.
 
@@ -94,7 +94,7 @@ Assign exactly one category:
 - `security-data`
 - `baseline-drift`
 
-Give findings stable report-local IDs `PR-01`, `PR-02`, ... . Return raw verdict `REVISE` when any P0–P2 gap prevents decision-complete execution or credible proof; otherwise return `APPROVE`. P3 alone does not block approval.
+Give findings stable report-local IDs `PR-01`, `PR-02`, ... . Submit raw verdict `REVISE` when any P0–P2 gap prevents decision-complete execution or credible proof; otherwise submit `APPROVE`. P3 alone does not block approval.
 
 ## Full raw report
 
@@ -106,13 +106,13 @@ The complete report contains:
 4. **Non-blocking risks:** at most two useful P3 findings.
 5. **Evidence checked:** source anchors, exhaustive searches, verification criteria, baseline result, and delegated evidence used.
 
-If material coverage is incomplete because required evidence is unavailable, return `REVISE` and identify the uncovered area. Missing non-load-bearing detail does not force revision.
+If material coverage is incomplete because required evidence is unavailable, submit `REVISE` and identify the uncovered area. Missing non-load-bearing detail does not force revision.
 
-## Return
+## Finish
 
-Return the complete report directly to the outer control plane as exactly one YAML document
-without a Markdown fence. Do not create review artifacts, manifests, snapshots, adjudication
-files, or retry state. The caller persists and identity-binds this response.
+Finish by calling `submit_plan_review` with the typed payload. The tool validates, terminates,
+and the caller persists and identity-binds the captured `structuredOutput`. Do not create
+review artifacts, manifests, snapshots, adjudication files, or retry state.
 
 ```yaml
 schema: development-plan-review.v1

@@ -11,7 +11,7 @@ Review one frozen implementation candidate in a single fresh, source-read-only s
 1. **Patch Gate** — introduced correctness, integration, security, compatibility, state, error-path, and test defects.
 2. **Plan Conformance Gate** — complete coverage of the accepted Plan's material behavioral contracts.
 
-Do not collapse either gate into a generic impression. This Skill returns evidence to the outer control plane; it does not edit, run project checks, drive UI, persist workspace artifacts, route lifecycle, or initiate another review.
+Do not collapse either gate into a generic impression. Finish by calling `submit_execute_review`; this Skill does not edit, run project checks, drive UI, persist workspace artifacts, route lifecycle, or initiate another review. Formal UI acceptance is the outer Review Worker's post-Relay step.
 
 ## Required inputs
 
@@ -23,8 +23,7 @@ Fail closed if any required identity is missing, unreadable, ambiguous, or inter
 - absolute accepted Plan path and exact SHA-256;
 - intended behavior/Card contract and implementation handoff;
 - terminal implementation Relay/session identity;
-- candidate manifest path and content hash;
-- when UI/manual acceptance is required, the existing evidence path(s) and content hash(es).
+- candidate manifest path and content hash.
 
 Read and hash the exact Plan before judging. Resolve both commits and inspect only the frozen `diff_base..diff_head` plus enough surrounding current code and tests to prove findings. Do not silently review a dirty working tree, current HEAD when it differs, another candidate, or an inferred Plan.
 
@@ -36,9 +35,9 @@ You and every delegated child are source/worktree read-only:
 - do not run builds/tests or any state-changing command;
 - do not invoke write-access children;
 - do not commit, push, open a PR, release, deploy, publish, or change versions;
-- do not drive a browser/application or repeat UI acceptance.
+- do not drive a browser/application.
 
-Read-only Git inspection, source search, and hashing are allowed. Return the complete report in the final response; the adapter's run-scoped result directory is managed by the caller.
+Read-only Git inspection, source search, and hashing are allowed. Formal UI acceptance is the outer Review Worker's post-Relay step, not this Relay's. Finish by calling `submit_execute_review`; the adapter's run-scoped result directory is managed by the caller.
 
 ## Delegate-work discipline
 
@@ -94,75 +93,42 @@ For every contract record Plan section, dependencies, status, and concise behavi
 
 Inspect all routes that could produce a prohibited effect. A symbol or test name is not behavioral proof. List out-of-Plan changes without using this gate to judge patch correctness. Any material `violated` contract means Plan Conformance Gate `fail`; otherwise it is `pass` only when material coverage is assessable. A genuinely unavailable material proof is an evidence blocker, not an invented PASS.
 
-## Existing UI/manual evidence
-
-Do not perform UI acceptance. Parse and validate the caller-provided evidence against the frozen identity:
-
-- board/Card/feature/stage;
-- producing Implement run and attempt;
-- candidate commit and diff base/head;
-- accepted Plan path/SHA;
-- terminal Relay/session;
-- artifact content hashes;
-- valid named UI lease interval and cleanup;
-- all required automated scenarios PASS;
-- all required candidate-bound manual verdicts PASS.
-
-A missing/mismatched/stale evidence packet that implementation can regenerate is a revise reason. A genuine external/manual prerequisite may make overall `blocked`. UI evidence never changes a failed Patch or Conformance Gate into PASS.
-
 ## Verdict
 
 Derive mechanically:
 
 - either logical gate `fail` → `overall: revise`;
-- both gates `pass` plus UI/manual `pass|not-required` → `overall: pass`;
-- both gates `pass` but correctable evidence is missing/mismatched → `overall: revise`;
-- only a genuine unavailable human/external prerequisite → `overall: blocked`.
+- both gates `pass` → `overall: pass`;
+- only a genuine unavailable human/external prerequisite that is not regenerable source evidence → `overall: blocked`.
 
-Do not use `blocked` for ordinary implementation defects, missing tests, or regenerable evidence.
+Do not consume, validate, or wait on UI or manual acceptance evidence. Do not use `blocked` for ordinary implementation defects, missing tests, or regenerable source evidence.
 
-## Return contract
+## Finish
 
-Return exactly one YAML document without a Markdown fence, using this top-level shape (the example is fenced only for this Skill document):
+Finish by calling `submit_execute_review` with the typed payload. The field set is the
+persisted `development-execute-review.v1` contract. The tool validates, terminates, and
+the caller persists the captured `structuredOutput`. Do not create a separate artifact or
+retry state.
 
 ```yaml
 schema: development-execute-review.v1
-board: <slug>
 card_id: <id>
-feature_id: <id>
 review_run_id: <id>
 round: <n>
 candidate_commit: <sha>
-diff_base: <sha>
-diff_head: <sha>
-accepted_plan:
-  path: <absolute path>
-  sha256: <sha>
-implementation_relay:
-  session_id: <id>
-candidate_manifest:
-  path: <path>
-  sha256: <sha>
+accepted_plan_sha256: <sha>
 patch_gate:
   verdict: pass | fail
   findings: []
-  advisories: []
 plan_conformance_gate:
   verdict: pass | fail
-  coverage: []
-  findings: []
-  accepted_deviations: []
-  out_of_plan_changes: []
-ui_evidence:
-  verdict: pass | not-required | revise | blocked
-  paths: []
   findings: []
 overall:
   verdict: pass | revise | blocked
-  summary: <1-3 sentences>
-  confidence: <0.0-1.0>
-delegated_evidence: []
-evidence_limitations: []
 ```
 
-`findings` must contain full evidence, not only titles. Preserve the complete Plan contract coverage table, every Patch P0–P3, accepted deviations, out-of-Plan changes, UI evidence findings, delegated evidence used, and limitations. Do not create a separate artifact or retry state; return this report to the outer Review Worker for identity validation and managed verdict routing.
+`findings` must contain full evidence, not only titles — the complete Plan contract
+coverage table, every Patch P0–P3, accepted deviations, out-of-Plan changes, delegated
+evidence used, and limitations. The outer Review Worker identity-validates the payload,
+performs formal UI acceptance after both gates PASS, and routes the managed verdict.
+
