@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Card Workspace · 全文搜索</title>
+    <link rel="stylesheet" href="assets/obsidian.css" />
+    <link rel="stylesheet" href="assets/fonts.css" />
+    <style>
+      body {
+        margin: 0;
+      }
+      #root {
+        --ink-shadow: 40 44 70;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: var(--font-interface);
+        color: var(--text-normal);
+        background: #f3f4f8;
+      }
+
+      .blob {
+        position: absolute;
+        width: 900px;
+        height: 900px;
+        border-radius: 50%;
+        background: radial-gradient(circle, hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.2), transparent 62%);
+      }
+      .blob-a {
+        left: -360px;
+        top: -420px;
+      }
+      .blob-b {
+        right: -380px;
+        bottom: -460px;
+        opacity: 0.7;
+      }
+
+      .titles {
+        position: absolute;
+        left: 820px;
+        right: 80px;
+        top: 70px;
+      }
+      .kicker {
+        font-size: 20px;
+        letter-spacing: 0.18em;
+        color: var(--interactive-accent);
+      }
+      .title {
+        margin: 10px 0 0;
+        font-size: 52px;
+        font-weight: 500;
+        line-height: 1.15;
+      }
+      .subtitle {
+        margin: 12px 0 0;
+        font-size: 26px;
+        color: var(--text-muted);
+      }
+
+      /* 578 x 850 sidebar at zoom 1.12. */
+      #viewport {
+        position: absolute;
+        left: 88px;
+        top: 64px;
+        width: 647px;
+        height: 952px;
+        overflow: hidden;
+        border-radius: 14px;
+        background: var(--background-primary);
+        box-shadow: 0 30px 80px rgb(var(--ink-shadow) / 0.2), 0 4px 16px rgb(var(--ink-shadow) / 0.1);
+      }
+      #camera {
+        position: absolute;
+        inset: 0;
+        transform-origin: 0 0;
+      }
+      #stage {
+        zoom: 1.12;
+      }
+      #overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      #cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 34px;
+        height: 34px;
+        margin: -2px 0 0 -5px;
+        transform-origin: 5px 2px;
+        opacity: 0;
+        filter: drop-shadow(0 3px 5px rgb(0 0 0 / 0.3));
+      }
+      #ripple {
+        position: absolute;
+        left: -30px;
+        top: -30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: 3px solid var(--interactive-accent);
+        opacity: 0;
+      }
+      #spotlight {
+        position: absolute;
+        border-radius: 14px;
+        box-shadow: 0 0 0 3000px rgb(20 24 40 / 0.38);
+        opacity: 0;
+      }
+      #ring {
+        position: absolute;
+        border-radius: 10px;
+        border: 3px solid var(--interactive-accent);
+        box-shadow: 0 0 0 5px hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.25);
+        opacity: 0;
+      }
+
+      #explainer {
+        position: absolute;
+        left: 820px;
+        top: 270px;
+        width: 1020px;
+        height: 640px;
+      }
+      .ex-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 84px;
+      }
+      #query-pill {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 300px;
+        height: 72px;
+        box-sizing: border-box;
+        padding: 0 28px 0 22px;
+        border-radius: 36px;
+        font-size: 32px;
+        background: var(--background-primary);
+        box-shadow: 0 12px 30px rgb(var(--ink-shadow) / 0.12), 0 2px 6px rgb(var(--ink-shadow) / 0.08);
+      }
+      #query-pill .ex-icon {
+        display: grid;
+        color: var(--interactive-accent);
+      }
+      #query-pill .ex-icon svg {
+        width: 30px;
+        height: 30px;
+      }
+      #query-text span {
+        display: none;
+      }
+      #query-caret {
+        width: 3px;
+        height: 36px;
+        border-radius: 2px;
+        background: var(--interactive-accent);
+      }
+      .ex-count {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        color: var(--interactive-accent);
+      }
+      .ex-count-label {
+        margin-right: 8px;
+        padding-bottom: 10px;
+        font-size: 22px;
+        color: var(--text-muted);
+      }
+      .count-window {
+        height: 72px;
+        overflow: hidden;
+      }
+      #count-strip div {
+        height: 72px;
+        font-size: 64px;
+        font-weight: 500;
+        line-height: 72px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .ex-count-unit {
+        padding-bottom: 10px;
+        font-size: 24px;
+      }
+
+      #mini-cards {
+        position: absolute;
+        left: 0;
+        top: 120px;
+        width: 1020px;
+        height: 500px;
+      }
+      .mini {
+        position: absolute;
+        transform-origin: 50% 50%;
+      }
+      .mini-body {
+        position: relative;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 14px 16px 0 20px;
+        overflow: hidden;
+        border-radius: 12px;
+        background: var(--background-primary);
+        box-shadow: 0 8px 22px rgb(var(--ink-shadow) / 0.1), 0 1px 4px rgb(var(--ink-shadow) / 0.08);
+      }
+      .mini-bar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background: var(--interactive-accent);
+        transform-origin: 50% 0;
+      }
+      .mini-title {
+        font-size: 19px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .mini-line {
+        height: 7px;
+        margin-top: 12px;
+        width: 86%;
+        border-radius: 4px;
+        background: rgb(var(--ink-shadow) / 0.09);
+      }
+      .mini-line + .mini-line {
+        margin-top: 9px;
+        width: 58%;
+      }
+      .mini-hits {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 15px;
+        color: white;
+        background: var(--interactive-accent);
+        opacity: 0;
+      }
+
+      #explainer-svg {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: visible;
+        pointer-events: none;
+      }
+
+      .caption {
+        position: absolute;
+        left: 820px;
+        right: 80px;
+        top: 962px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 32px;
+        opacity: 0;
+      }
+      .caption .step {
+        flex: none;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 26px;
+        color: white;
+        background: var(--interactive-accent);
+      }
+
+      .brand-card {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      #endcard {
+        opacity: 0;
+      }
+      .brand-logo svg {
+        display: block;
+        width: 150px;
+        height: 150px;
+        filter: drop-shadow(0 16px 32px rgb(34 55 78 / 0.28));
+      }
+      .brand-wordmark {
+        margin-top: 40px;
+        color: #1f2a37;
+      }
+      .brand-wordmark svg {
+        display: block;
+        width: 560px;
+        overflow: visible;
+      }
+      .brand-tagline {
+        margin-top: 26px;
+        font-size: 32px;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="search" data-start="0" data-width="1920" data-height="1080" data-fps="60" data-duration="19.7">
+      <div class="blob blob-a"></div>
+      <div class="blob blob-b"></div>
+
+      <header class="titles">
+        <div class="kicker">CARD WORKSPACE · 功能演示 01</div>
+        <h1 class="title">全文搜索</h1>
+        <p class="subtitle">输入关键词，卡片流只留下命中的笔记</p>
+      </header>
+
+      <div id="viewport">
+        <div id="camera">
+          <div id="stage"></div>
+          <div id="overlay">
+            <div id="spotlight"></div>
+            <div id="ring"></div>
+            <div id="ripple"></div>
+            <svg id="cursor" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M6 3 L6 25 L11.5 19.8 L15.2 28.2 L19 26.6 L15.4 18.3 L23 18.3 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <section id="explainer">
+        <div class="ex-head">
+          <div id="query-pill"><span class="ex-icon" data-icon="search"></span><span id="query-text"></span><span id="query-caret"></span></div>
+          <div class="ex-count">
+            <span class="ex-count-label">卡片流</span>
+            <div class="count-window"><div id="count-strip"></div></div>
+            <span class="ex-count-unit">篇</span>
+          </div>
+        </div>
+        <div id="mini-cards"></div>
+      </section>
+      <svg id="explainer-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <div class="caption" id="caption-1"><span class="step">1</span><span>点击工具栏的搜索按钮</span></div>
+      <div class="caption" id="caption-2"><span class="step">2</span><span>输入关键词</span></div>
+      <div class="caption" id="caption-3"><span class="step">3</span><span>只留下命中的卡片，并显示命中数</span></div>
+      <div class="caption" id="caption-4"><span class="step">4</span><span>清除关键词，回到完整卡片流</span></div>
+
+      <section class="brand-card" id="intro">
+        <div class="brand-logo"></div>
+        <div class="brand-wordmark"></div>
+        <div class="brand-tagline">在 Obsidian 中更好地搜索</div>
+      </section>
+
+      <section class="brand-card" id="endcard">
+        <div class="brand-logo"></div>
+        <div class="brand-wordmark"></div>
+        <div class="brand-tagline">汇集，整理，重构 —— 理解</div>
+      </section>
+    </div>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

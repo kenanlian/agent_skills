@@ -1,0 +1,10 @@
+node_modules/
+dist/
+renders/
+.hyperframes/
+
+# Contains Obsidian's proprietary app.css and locally licensed fonts; never commit.
+theme/
+
+# Build outputs copied into each HyperFrames project.
+episodes/*/assets/
