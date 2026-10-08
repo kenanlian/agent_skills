@@ -29,6 +29,17 @@ The dump contains Obsidian's proprietary `app.css`: fine for local renders, neve
 - Escape `</style` → `<\/style` (see hyperframes.md).
 - Fonts: body `style` carries overrides such as `--font-interface-override: 霞鹜文楷`. Declare `@font-face` under the **exact family names used there**, localized names included. WSL has no CJK fonts; copy them from `/mnt/c/Windows/Fonts` or `/mnt/c/Users/*/AppData/Local/Microsoft/Windows/Fonts`. Those files arrive read-only: `rm` the target before copying, then `chmod 644`.
 
+## Default paths
+
+Theme dump and demo notes are different vaults. Do not point both scripts at the same directory.
+
+| Script | Env | Default |
+|---|---|---|
+| `import-theme.mjs` | `DUMP_DIR` | `/mnt/d/Kenan/OBSIDIAN/Card-Workspace-Docs/_video-dump` (`D:\Kenan\OBSIDIAN\Card-Workspace-Docs\_video-dump`) |
+| `snapshot-vault.mjs` | `VAULT_DIR` | `/mnt/d/Kenan/OBSIDIAN/Card-Workspace-Docs-zh` (`D:\Kenan\OBSIDIAN\Card-Workspace-Docs-zh`) |
+
+Export the live theme into the dump vault's `_video-dump`. Snapshot notes, timestamps, and `data.json` from the Chinese demo vault.
+
 ## Data snapshot (`templates/scripts/snapshot-vault.mjs`)
 
 - Snapshot markdown content plus `ctime`/`mtime`, and copy `.obsidian/plugins/<id>/data.json` so sort order, pins, expansion state, and widths match the user's setup.

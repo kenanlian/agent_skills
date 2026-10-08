@@ -4,7 +4,8 @@ import { execFileSync } from "node:child_process";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, join, relative, sep } from "node:path";
 
-const vaultDir = process.env.VAULT_DIR ?? "/mnt/d/Kenan/OBSIDIAN/Card-Workspace-Docs";
+// Demo notes and plugin settings. Theme dump stays on Card-Workspace-Docs/_video-dump.
+const vaultDir = process.env.VAULT_DIR ?? "/mnt/d/Kenan/OBSIDIAN/Card-Workspace-Docs-zh";
 const outFile = new URL("../data/vault.json", import.meta.url);
 
 async function collectMarkdown(dir) {

@@ -1,6 +1,6 @@
 ---
 name: product-demo-video
-description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, rendered to 16:9 MP4 with HyperFrames. Use when the user wants a product demo, feature walkthrough, explainer, or promo video that goes beyond a plain screen recording, especially for Obsidian plugins or other Svelte/React web UIs whose source is available.
+description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, rendered to 16:9 MP4 with HyperFrames. Voice capability is ready through the verified Doubao bidirectional TTS call. Use when the user wants a product demo, feature walkthrough, explainer, or promo video that goes beyond a plain screen recording, especially for Obsidian plugins or other Svelte/React web UIs whose source is available.
 ---
 
 # Product demo video
@@ -18,7 +18,7 @@ Rebuild the product's UI from its **real components** instead of recording the s
 Agree with the user before building:
 
 - **Format**: landscape 1920 × 1080 at 60 fps is the default (Bilibili, Xiaohongshu). Vertical 1080 × 1920 only on request.
-- **Series or single video**, captions (text first; voice-over is a later pass), and the brand lines.
+- **Series or single video**, captions, and the brand lines. Voice capability is ready: narration uses the verified Doubao bidirectional TTS call in [references/voice.md](references/voice.md). Captions stay the spoken text.
 - **Storyboard**: 4–6 beats. Each beat has one numbered caption, the UI action, and the explainer reaction it triggers.
 - **Length**: 25–30 s of effective demo per episode (first UI motion to the outro hand-off), plus a ≈ 2 s intro and ≈ 4.8 s outro.
 
@@ -125,3 +125,4 @@ State the output path, duration (effective demo vs. brand), and what each beat s
 - [references/hyperframes.md](references/hyperframes.md): composition contract, seek hook, bundling, browser, render pitfalls
 - [references/obsidian.md](references/obsidian.md): theme export, fonts, snapshot, shim, shell DOM, Obsidian-specific pitfalls
 - [references/motion.md](references/motion.md): landscape layout, motion feel, explainer and choreography patterns, timing, brand intro/outro
+- [references/voice.md](references/voice.md): voice capability is ready; Doubao bidirectional TTS call, credentials file, verified audio settings

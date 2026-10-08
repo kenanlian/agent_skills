@@ -4,6 +4,7 @@ import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:f
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+// Theme dump only. Demo notes come from Card-Workspace-Docs-zh (see snapshot-vault.mjs).
 const dumpDir = process.env.DUMP_DIR ?? "/mnt/d/Kenan/OBSIDIAN/Card-Workspace-Docs/_video-dump";
 const themeDir = new URL("../theme/", import.meta.url).pathname;
 const fontDir = join(themeDir, "fonts");
