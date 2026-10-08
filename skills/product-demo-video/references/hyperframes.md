@@ -21,12 +21,29 @@ A headless shell gives `beginframe` capture; regular Chrome falls back to slower
 <script src="assets/app.js"></script>
 ```
 
-- `data-duration` is the render length. Keep it equal to the scene clock's `end`.
+- `data-duration` is the render length. With a `clock.ts`, `npm run build` writes it from `T.end`; otherwise keep it equal by hand.
 - `data-fps` sets the render rate (CLI default 30). 60 fps doubles capture time; `--fps 30` gives a quicker check render.
 - Register exactly one paused timeline at `window.__timelines["<composition-id>"]`. Building it after `document.fonts.ready` is fine: register only when it is complete.
 - Hold capture until async setup finishes: `(window.__hf ??= {}).buildReady ??= {}; window.__hf.buildReady["stage"] = readyPromise;`
 - Elements hidden until later: set the initial state with `fromTo` (immediate render) or CSS `opacity: 0`; don't pair a CSS `transform` with a GSAP tween on the same property.
 - The static guard may log `Missing window.__timelines registration` when registration lives in a bundle. Harmless.
+
+## Audio
+
+HyperFrames mixes `<audio id data-start>` elements into the MP4 with FFmpeg (checked on 0.8.90: 5 voice lines + bed rendered, onsets and duck levels measured from the output).
+
+| Attribute | Meaning |
+|---|---|
+| `id` | Required; a track without one is skipped |
+| `data-start`, `data-duration` | Composition seconds |
+| `data-media-start` | Seconds into the source file |
+| `data-volume` | Base gain (1 = unchanged) |
+| `data-fade-in`, `data-fade-out` | Seconds, at the clip's edges |
+| `data-automation` | `{"version":1,"lanes":[{"target":"volume","points":[{"t":…,"v":…}]}]}`; clip-local `t`, absolute `v`, linear between points; replaces `data-volume` where it has points |
+
+**Tracks must be in the static HTML.** The renderer reads `<audio>` from the HTML file; per its source, it probes the live page only when an inline script visibly creates media, and the episode script is an external bundle. An element `main.ts` inserted at runtime would be missing from the render without any error. After `npm run tts`, rebuild so the block is refreshed. `build-episodes.mjs` therefore writes the tracks between `<!-- audio:begin -->` and `<!-- audio:end -->` from `clock.ts`; never add or retime them in `main.ts`. For the same reason, duck with `data-automation`, not GSAP `volume` tweens.
+
+Studio preview and `scripts/frames.mjs` are silent: check sound from the rendered MP4 (see [voice.md](voice.md#verify)).
 
 ## Driving stage state per frame
 
@@ -59,6 +76,8 @@ Build each episode's `main.ts` as an IIFE with Vite library mode into `episodes/
 | Scatter differs between renders or workers | `Math.random` or `stagger: { from: "random" }` | Fixed per-index jitter (see the template's `jitter`) |
 | A virtualized list jumps every N-th frame (N = worker count) after a scripted scroll | Row heights come from a `ResizeObserver`, which reports a frame later; a worker that seeks straight in replays the click and scroll in one batch and scrolls in estimated heights | The Director's `settled-resize.ts` observer, flushed after every step; check by comparing a direct seek with a frame-by-frame seek at the same time |
 | Render length wrong or the timeline never ends | `repeat: -1` on an idle loop | Finite `repeat`, odd so a `yoyo` ends at rest |
+| Mastered MP4 runs 0.1 s past the video | AAC encoder padding | `loudnorm.mjs` passes `-shortest` for `.mp4` outputs |
+| Voice sounds flatter and different from the speaker's online sample after mastering | ffmpeg `loudnorm` with `linear=true` silently falls back to dynamic (compressing) mode when the needed gain would exceed the true-peak ceiling | `loudnorm.mjs` measures, then applies one static gain capped by the peak; a peak-limited result lands slightly under the target |
 | Leader misses its UI element | Measured after an entrance `fromTo` already offset the viewport, or while the camera is transformed | Measure every box first in `buildTimeline`, and draw leaders only at camera identity |
 
 ## Camera, masking, and explainer structure

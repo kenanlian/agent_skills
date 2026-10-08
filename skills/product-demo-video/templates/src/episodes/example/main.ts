@@ -9,57 +9,12 @@ import { createDemoVault, type VaultSnapshot } from "../../stage/demo-vault";
 import { call, click, Director, hover, type, type Box, type MountedScene } from "../../stage/director";
 import { animateLogo, animateWordmark, renderLogo, renderWordmark } from "../../stage/brand";
 import { applyThemeMeta, createLeftSidebarShell, mountPanel } from "../../stage/obsidian-shell";
+import { CAPTIONS, T } from "./clock";
 
 const COMPOSITION_ID = "search";
 const SIDEBAR = { width: 578, height: 850 };
 const QUERY = "merge";
 const CHARS_PER_SECOND = 9;
-
-/** When the demo starts, after the intro card leaves. */
-const DEMO = 2;
-
-function shift<K extends string>(offset: number, times: Record<K, number>): Record<K, number> {
-  return Object.fromEntries(Object.entries<number>(times).map(([key, value]) => [key, value + offset])) as Record<K, number>;
-}
-
-/** Scene clock, in seconds. Must end at the root's `data-duration`. */
-const T = {
-  introTagline: 0.2,
-  introOut: 1.65,
-  ...shift(DEMO, {
-    titleIn: 0.2,
-    frameIn: 0.35,
-    explainerIn: 0.7,
-    caption1: 1.2,
-    cursorIn: 1.3,
-    cursorToSearch: 1.45,
-    hoverSearch: 2.1,
-    clickSearch: 2.4,
-    cursorToInput: 2.65,
-    caption2: 2.9,
-    leaderIn: 2.95,
-    typeStart: 3.4,
-    commit: 4.4,
-    dim: 4.45,
-    fall: 4.75,
-    gather: 5.05,
-    caption3: 5.5,
-    hits: 5.6,
-    leaderOut: 6.2,
-    spotlight: 6.4,
-    cardPushIn: 6.9,
-    cardPullBack: 8.9,
-    spotlightOut: 9.2,
-    caption4: 9.8,
-    cursorToClear: 9.9,
-    hoverClear: 10.55,
-    clickClear: 10.85,
-    restore: 10.9,
-    outro: 12.4,
-    endCard: 12.9,
-  }),
-  end: 19.7,
-};
 
 applyThemeMeta(meta);
 const vaultSnapshot = snapshot as VaultSnapshot;
@@ -202,6 +157,20 @@ function renderCountStrip(from: number, to: number): number {
   return values.length - 1;
 }
 
+/** Numbered captions from the narration lines, so the screen shows what is said. */
+function renderCaptions(): string[] {
+  const container = document.getElementById("captions")!;
+  container.replaceChildren(...CAPTIONS.map((text, index) => {
+    const caption = Object.assign(document.createElement("div"), { className: "caption", id: `caption-${index + 1}` });
+    caption.append(
+      Object.assign(document.createElement("span"), { className: "step", textContent: String(index + 1) }),
+      Object.assign(document.createElement("span"), { textContent: text }),
+    );
+    return caption;
+  }));
+  return CAPTIONS.map((_, index) => `#caption-${index + 1}`);
+}
+
 function renderQuery(): HTMLElement[] {
   const text = document.getElementById("query-text")!;
   const chars = [...QUERY].map((char) => Object.assign(document.createElement("span"), { textContent: char }));
@@ -277,7 +246,7 @@ function buildTimeline(): gsap.core.Timeline {
   tl.fromTo([".ex-head > *"], { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: "expo.out", stagger: 0.1 }, T.explainerIn);
   tl.fromTo(minis, { y: 36, scale: 0.86, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.7, ease: "back.out(1.6)", stagger: 0.035 }, T.explainerIn + 0.15);
 
-  const captions = ["#caption-1", "#caption-2", "#caption-3", "#caption-4"];
+  const captions = renderCaptions();
   const captionTimes = [T.caption1, T.caption2, T.caption3, T.caption4];
   captions.forEach((selector, index) => {
     tl.fromTo(selector, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "expo.out" }, captionTimes[index]);

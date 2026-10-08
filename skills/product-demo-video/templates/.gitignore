@@ -6,5 +6,10 @@ renders/
 # Contains Obsidian's proprietary app.css and locally licensed fonts; never commit.
 theme/
 
+# Licensed music; the license may not allow redistribution. Voice takes in
+# audio/voice/ (raw/ especially) stay committed: they are billed per character.
+audio/bgm/
+audio/source/
+
 # Build outputs copied into each HyperFrames project.
 episodes/*/assets/

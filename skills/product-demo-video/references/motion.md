@@ -37,12 +37,20 @@ The target is **silky and lively**: continuous, long-tailed motion on large surf
 
 ## Scene clock
 
-Keep all times in one `T` object, and the root `data-duration` equal to `T.end`. When inserting a segment (e.g. an intro), shift the rest instead of retuning:
+Keep all times in one `T` object in the episode's DOM-free `clock.ts`; the build writes `T.end` to the root's `data-duration`. Beat start times come from the voice takes ([voice.md](voice.md#timing-from-the-takes)); inside a beat, write choreography as offsets from its start and `shift` them into place:
 
 ```ts
 const shift = <K extends string>(offset: number, times: Record<K, number>) =>
   Object.fromEntries(Object.entries<number>(times).map(([k, v]) => [k, v + offset])) as Record<K, number>;
-const T = { introOut: 1.65, ...shift(2, { titleIn: 0.2, /* … */ endCard: 12.9 }), end: 19.7 };
+const beats = sequence(DEMO + 1.2, [{ line: "open", min: 1.7 }, /* … */], manifest);
+const [open /* , … */] = beats.starts;
+const T = {
+  introTagline: 0.2,
+  introOut,
+  ...shift(open, { caption1: 0, cursorIn: 0.1, hoverSearch: 0.9, clickSearch: 1.2 }),
+  ...shift(beats.end, { outro: 0, endCard: 0.5 }),
+  end: beats.end + 7.3,
+};
 ```
 
 ## UI patterns
@@ -76,17 +84,17 @@ Flat style tokens: cards white, radius 12, shadow `0 8px 22px rgb(40 44 70 / 0.1
 
 ## Timing
 
-A beat that reads well (≈ 5–6 s): caption in → cursor glide 0.6 s → hover 0.3 s → click → UI result → explainer reaction (0.05–0.35 s later, ~1 s to settle) → hold ≥ 1.5 s with idle motion → next caption. Five beats fill the 25–30 s demo.
+A beat that reads well (≈ 5–6 s): caption and its line in → cursor glide 0.6 s → hover 0.3 s → click → UI result → explainer reaction (0.05–0.35 s later, ~1 s to settle) → hold ≥ 1.5 s with idle motion → next caption. Five beats fill the 25–30 s demo. A beat's `min` is the time its choreography needs; the line may stretch it, and the stretch is hold at the end.
 
-The template's 12.9 s demo: title 0.2, explainer 0.7, cursor in 1.3, click 2.4, leader 2.95, type 3.4, commit 4.4, drop 4.75, gather 5.05, hits 5.6, spotlight 6.4, push-in 6.9 → 8.9, clear 10.85, restore 10.9, outro 12.4.
+The template's beats, as offsets from each beat start, with their `min`: open the search (caption 0, cursor in 0.1, hover 0.9, click 1.2; 1.7 s), type (leader 0.05, type 0.5, commit 1.5, drop 1.85, gather 2.15; 2.6 s), results (hits 0.1, spotlight 0.9, push-in 1.4 → 3.4; 4.3 s), clear (click 1.05, restore 1.1; 2.6 s). The setup before the first beat is 1.2 s (title 0.2, explainer 0.7), and the outro runs 7.3 s from the end of the last beat.
 
 ## Brand intro and outro
 
 Use the product's real icon (e.g. the site favicon) and brand font. `templates/src/stage/brand.ts` implements both animations. Landscape sizes: logo 150 px, wordmark 560 px wide, tagline 32 px.
 
-**Intro** (≈ 2 s): icon, wordmark, and a topic line such as "在 Obsidian 中更好地搜索". The icon and wordmark are static and fully visible at frame 0, so the first frame works as the cover. Only the topic line fades in (0.7 s `sine.out`). Leave with y −40, opacity 0 over 0.5 s.
+**Intro** (≈ 2–3.5 s): icon, wordmark, and a topic line such as "在 Obsidian 中更好地搜索". The icon and wordmark are static and fully visible at frame 0, so the first frame works as the cover. Only the topic line fades in (0.7 s `sine.out`). The intro line (plugin name + episode topic) starts at 0.3 s; the card leaves 0.25 s after it ends, and no earlier than 1.65 s, with y −40, opacity 0 over 0.5 s.
 
-**Outro** (≈ 4.8 s):
+**Outro** (≈ 4.8 s, not narrated; the music bed comes up instead):
 
 - Icon: tile fades and scales 0.92 → 1 (0.6 s). The bar grows from its center (`scaleY` 0 → 1). The cards glide in from beyond the right edge along the bar, clipped by the rounded tile (`clipPath`). The lower card starts farther out (x 86 vs. 60) and later (+0.16 s), so the pair is never aligned and the offset narrows into place: `expo.out`, 1.3 / 1.45 s. This reads as cards being tidied.
 - Wordmark write-on: per glyph, trace the outline with `stroke-dashoffset` (length → 0, 0.95 s `sine.inOut`), fill in from 70 % of the trace (0.65 s), fade the stroke out, and rise 6 px. Stagger 0.13 s so several letters are written at once. Stroke width is 1.6 px converted to viewBox units. Fade each glyph from opacity 0 at its start, because a round line cap paints a dot even at full dash offset.

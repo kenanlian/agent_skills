@@ -7,6 +7,8 @@
     "snapshot:vault": "node scripts/snapshot-vault.mjs",
     "import:theme": "node scripts/import-theme.mjs",
     "dev": "vite",
+    "tts": "node scripts/tts.mjs",
+    "loudnorm": "node scripts/loudnorm.mjs",
     "build": "node scripts/build-episodes.mjs",
     "hf": "node scripts/hf.mjs",
     "check": "tsc --noEmit",

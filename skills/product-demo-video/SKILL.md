@@ -1,6 +1,6 @@
 ---
 name: product-demo-video
-description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, rendered to 16:9 MP4 with HyperFrames. Voice capability is ready through the verified Doubao bidirectional TTS call. Use when the user wants a product demo, feature walkthrough, explainer, or promo video that goes beyond a plain screen recording, especially for Obsidian plugins or other Svelte/React web UIs whose source is available.
+description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, narrated with Doubao TTS over a ducked music bed, rendered to 16:9 MP4 with HyperFrames. Use when the user wants a product demo, feature walkthrough, explainer, or promo video that goes beyond a plain screen recording, especially for Obsidian plugins or other Svelte/React web UIs whose source is available.
 ---
 
 # Product demo video
@@ -18,9 +18,12 @@ Rebuild the product's UI from its **real components** instead of recording the s
 Agree with the user before building:
 
 - **Format**: landscape 1920 × 1080 at 60 fps is the default (Bilibili, Xiaohongshu). Vertical 1080 × 1920 only on request.
-- **Series or single video**, captions, and the brand lines. Voice capability is ready: narration uses the verified Doubao bidirectional TTS call in [references/voice.md](references/voice.md). Captions stay the spoken text.
-- **Storyboard**: 4–6 beats. Each beat has one numbered caption, the UI action, and the explainer reaction it triggers.
-- **Length**: 25–30 s of effective demo per episode (first UI motion to the outro hand-off), plus a ≈ 2 s intro and ≈ 4.8 s outro.
+- **Series or single video**, captions, and the brand lines.
+- **Voice, every episode**: ask the user for the TTS speaker id before synthesizing anything. Never reuse the last episode's voice or an env default. Audition one line before synthesizing the rest ([references/voice.md](references/voice.md#voice-ask-every-episode)).
+- **Narration**: each caption is its spoken line; a line may override only its pronunciation (`say`). The intro speaks the plugin name plus the episode topic; the outro is not narrated.
+- **Music**: the series bed is Somewhere Sunny (ver 2) (Kevin MacLeod, CC BY 4.0, credit in the description); change it only if the user asks ([references/voice.md](references/voice.md#choosing-music)).
+- **Storyboard**: 4–6 beats. Each beat has one numbered caption (its narration line), the UI action, and the explainer reaction it triggers.
+- **Length**: 25–30 s of effective demo per episode (first UI motion to the outro hand-off), plus a ≈ 2–3.5 s intro (as long as its line) and ≈ 4.8 s outro.
 
 ## Architecture
 
@@ -28,9 +31,10 @@ Agree with the user before building:
 data snapshot ──► demo host ──► real root component ──► platform shell ──► Director ──► HyperFrames composition ──► MP4
 (real notes,      (replaces the    (mounted with        (DOM ancestry +   (seekable      (UI viewport + explainer layer,
  settings,         app's host;      a model the host     exported theme,   replay of      cursor, camera, spotlight,
- timestamps)       derives state    publishes)           hover mirror)     timed steps)   captions, GSAP timeline)
-                   with the app's
-                   own functions)
+ timestamps)       derives state    publishes)           hover mirror)     timed steps)   captions, GSAP timeline,
+                   with the app's                                              ▲           voice + music <audio> tracks)
+                   own functions)                                              │
+narration lines ──► TTS takes ──► scene clock (beat lengths from take durations) ┘
 ```
 
 Non-negotiable rules:
@@ -41,6 +45,7 @@ Non-negotiable rules:
 4. **Measure, then choreograph.** After `document.fonts.ready`, use `director.measure(time, target, origin)` to get element boxes, then bake them into the GSAP timeline.
 5. **No wall clock, randomness, or blinking.** Hide the native caret; drive hover styles through the `.demo-hover` mirror instead of `:hover`. Scatter comes from a fixed per-index jitter, never `Math.random` or `stagger: { from: "random" }`.
 6. **Visible state is tweened or set, never written in callbacks.** HyperFrames may seek with events suppressed, so text or classes changed in `onUpdate`/`onComplete` go stale. Use transforms (e.g. a rolling number strip), `tl.set`, or Director steps.
+7. **The voice sets the clock.** Beat lengths come from the synthesized takes through the episode's `clock.ts`; never hand-tune a beat shorter than its line. `<audio>` tracks are static HTML written by the build from that clock, never inserted or retimed by `main.ts`.
 
 ## Explainer layer
 
@@ -62,10 +67,11 @@ The UI is the evidence; the explainer is the reading aid. Layout and recipes are
 - [ ] 1. Capture the environment: theme export, reference screenshot, app settings, data snapshot
 - [ ] 2. Scaffold the video project from templates/
 - [ ] 3. Stage: shim + host + shell; match the reference screenshot line for line
-- [ ] 4. Storyboard: beats, captions, explainer reactions; pick demo data that tells the story
-- [ ] 5. Episode: steps + explainer + timeline; iterate with quick frames
-- [ ] 6. Brand intro/outro
-- [ ] 7. Render with HyperFrames; verify frames from the MP4
+- [ ] 4. Storyboard: beats, captions (= narration lines), explainer reactions; pick demo data that tells the story
+- [ ] 5. Voice and music: ask the speaker, audition one line, synthesize; normalize the chosen bed
+- [ ] 6. Episode: clock from the takes, steps + explainer + timeline; iterate with quick frames
+- [ ] 7. Brand intro/outro
+- [ ] 8. Render with HyperFrames, master the loudness; verify frames and sound from the MP4
 ```
 
 **1. Capture.** For Obsidian, follow [references/obsidian.md](references/obsidian.md): export every live stylesheet plus body classes from devtools, take a sidebar screenshot, read the plugin's `data.json`, snapshot the demo vault with true creation times. For other apps, capture the equivalent: computed theme, container DOM ancestry, settings, data.
@@ -81,8 +87,14 @@ The UI is the evidence; the explainer is the reading aid. Layout and recipes are
 | `src/stage/obsidian-shell.ts` | Container DOM, theme meta, scrollbar gutter, hover mirror, focus-ring suppression, mount | Per platform |
 | `src/stage/director.ts` | Seekable step replay, `measure` / `measureAll`, `read` for explainer data | Reuse as is |
 | `src/stage/brand.ts` | Logo + wordmark rendering and animation | Logo geometry and colors |
-| `src/episodes/example/main.ts`, `episodes/example/index.html` | A complete 19.7 s landscape episode: intro, search demo with a mirrored card-stream explainer (leader, typed pill, rolling count, drop and gather, twin lift), outro | Steps, captions, explainer, timing |
-| `scripts/*.mjs` | Snapshot, theme import, build, wordmark, preview/screenshot/inspect tools, HyperFrames wrapper | Paths, font list |
+| `src/stage/narration.ts` | Take manifest types, `sequence` (beats from take lengths), music duck lane, `BGM_LEVELS` | Levels after the first reviewed episode |
+| `src/episodes/example/audio.json` | Speaker (empty until the user picks one), narration lines, music bed | Per episode |
+| `src/episodes/example/clock.ts` | DOM-free scene clock `T`, `CAPTIONS`, `AUDIO_PLAN` from `voice.json` | Beats, `min` per beat, offsets |
+| `src/episodes/example/main.ts`, `episodes/example/index.html` | A complete narrated landscape episode: spoken intro, search demo with a mirrored card-stream explainer (leader, typed pill, rolling count, drop and gather, twin lift), outro under music | Steps, explainer |
+| `scripts/tts.mjs` | Synthesizes `audio.json` lines (raw takes billed once), trims their silence, sets them to -21 LUFS, writes `voice.json` | Reuse as is |
+| `scripts/loudnorm.mjs` | Two-pass loudness: the music bed before build, the final MP4 after render | Reuse as is |
+| `scripts/build-episodes.mjs` | Bundles episodes; writes `<audio>` tracks and `data-duration` from `clock.ts` | Reuse as is |
+| `scripts/*.mjs` (others) | Snapshot, theme import, wordmark, preview/screenshot/inspect tools, HyperFrames wrapper | Paths, font list |
 
 Copy the product's brand icon (e.g. the site favicon) and brand font rather than inventing new ones.
 
@@ -96,33 +108,42 @@ ffmpeg -v error -y -i theme/reference.jpg -i renders/stage.png \
 
 Wrapping differences are usually a missing scrollbar gutter, wrong DOM order in the shell, or a missing font. `scripts/inspect.mjs` prints boxes and computed styles; `scripts/eval.mjs` evaluates expressions in the page.
 
-**4. Storyboard.** Choose data that makes the mechanism visible: a search that leaves 2–3 of 14 notes reads as narrowing, while one that leaves 9 does not. Check candidates against the snapshot, then confirm in the stage with the product's own functions. For a new explainer, show the user a still sample (`scripts/shot.mjs` on a dev page) before animating it.
+**4. Storyboard.** Choose data that makes the mechanism visible: a search that leaves 2–3 of 14 notes reads as narrowing, while one that leaves 9 does not. Check candidates against the snapshot, then confirm in the stage with the product's own functions. For a new explainer, show the user a still sample (`scripts/shot.mjs` on a dev page) before animating it. Write each beat's caption as the line to be spoken, and the intro line as the plugin name plus the topic; agree on them with the user before any synthesis, since every changed line is billed again.
 
-**5. Episode.** Script steps with the Director, read explainer data, measure targets, then build the timeline. Layout, motion-feel numbers, and patterns are in [references/motion.md](references/motion.md). Iterate in seconds, not minutes:
+**5. Voice and music.** Details in [references/voice.md](references/voice.md).
+
+```bash
+npm run tts -- <episode> --line <first beat id>   # audition, after the user named the speaker
+npm run tts -- <episode>                          # the rest, once the voice is confirmed
+node scripts/loudnorm.mjs "audio/source/Somewhere Sunny (ver 2).mp3" audio/bgm/somewhere-sunny.mp3 --lufs=-21 --from=0 --for=<T.end>
+```
+
+**6. Episode.** Lay out the beats in `clock.ts` from the takes, script steps with the Director, read explainer data, measure targets, then build the timeline. Layout, motion-feel numbers, and patterns are in [references/motion.md](references/motion.md). Iterate in seconds, not minutes (quick frames are silent):
 
 ```bash
 npm run build && node scripts/frames.mjs <episode> 0,2.5,5,8,12          # needs npm run dev
 CROP=1920:1080:0:0 node scripts/frames.mjs <episode> 7.7 renders/f.png   # one frame at full size
 ```
 
-**6. Brand.** Intro: final brand layout, static at frame 0 (doubles as the cover), with only the topic line fading in, then a hand-off to the demo. Outro: animated logo + write-on wordmark + tagline. Details in [references/motion.md](references/motion.md#brand-intro-and-outro).
+**7. Brand.** Intro: final brand layout, static at frame 0 (doubles as the cover), with only the topic line fading in while the intro line is spoken, then a hand-off to the demo. Outro: animated logo + write-on wordmark + tagline. Details in [references/motion.md](references/motion.md#brand-intro-and-outro).
 
-**7. Render and verify.** Integration specifics and pitfalls are in [references/hyperframes.md](references/hyperframes.md).
+**8. Render and verify.** Integration specifics and pitfalls are in [references/hyperframes.md](references/hyperframes.md).
 
 ```bash
 npm run hf -- render episodes/<episode> -o renders/<episode>.mp4
-ffmpeg -v error -y -i renders/<episode>.mp4 -vf "fps=1/3,scale=480:-1,tile=4x2" -frames:v 1 renders/sheet.png
+node scripts/loudnorm.mjs renders/<episode>.mp4 renders/<episode>.final.mp4 --lufs=-16
+ffmpeg -v error -y -i renders/<episode>.final.mp4 -vf "fps=1/3,scale=480:-1,tile=4x2" -frames:v 1 renders/sheet.png
 ```
 
-Always inspect frames from the final MP4: parallel workers each seek their own range, so this is the check that the replay model held. A frame that differs from both neighbours while the neighbours match each other means workers disagree on state. For smoothness, also step through a fast beat frame by frame (`-vf "select='between(t\,5\,5.5)',scale=480:-1,tile=6x5"`).
+Check the sound as in [references/voice.md](references/voice.md#verify): one audio stream, about -16 LUFS, and each line starting with its caption. Always inspect frames from the final MP4: parallel workers each seek their own range, so this is the check that the replay model held. A frame that differs from both neighbours while the neighbours match each other means workers disagree on state. For smoothness, also step through a fast beat frame by frame (`-vf "select='between(t\,5\,5.5)',scale=480:-1,tile=6x5"`).
 
 ## Reporting to the user
 
-State the output path, duration (effective demo vs. brand), and what each beat shows in the UI and the explainer; list deliberate deviations from the real app (omitted folders, hidden caret, font weight substitutions) and anything not verified against the real DOM.
+State the output path, duration (effective demo vs. brand), and what each beat shows in the UI and the explainer; the speaker id, characters billed in this run, voice seconds, the music track with its license, and the measured loudness; list deliberate deviations from the real app (omitted folders, hidden caret, font weight substitutions) and anything not verified against the real DOM.
 
 ## Additional resources
 
 - [references/hyperframes.md](references/hyperframes.md): composition contract, seek hook, bundling, browser, render pitfalls
 - [references/obsidian.md](references/obsidian.md): theme export, fonts, snapshot, shim, shell DOM, Obsidian-specific pitfalls
 - [references/motion.md](references/motion.md): landscape layout, motion feel, explainer and choreography patterns, timing, brand intro/outro
-- [references/voice.md](references/voice.md): voice capability is ready; Doubao bidirectional TTS call, credentials file, verified audio settings
+- [references/voice.md](references/voice.md): narration and music pipeline (speaker choice, lines, timing from takes, music bed and ducking, mastering, verification) and the Doubao TTS protocol and credentials
