@@ -13,3 +13,8 @@ audio/source/
 
 # Build outputs copied into each HyperFrames project.
 episodes/*/assets/
+
+# Recorded mode: raw takes are large; work/ is regenerated; the caption font is licensed.
+records/
+recorded/*/work/
+fonts/

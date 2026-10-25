@@ -25,6 +25,9 @@ node --test 'skills/audit-persistence/agents/tests/*.test.mjs'
 # Shared baoyu-design agent tests, from the repository root
 node --test 'skills/baoyu-design/agents/tests/*.test.mjs'
 
+# product-demo-video recorded-mode caption and cut logic
+node --test 'skills/product-demo-video/tests/*.test.mjs'
+
 # PPTX generator checks
 cd skills/baoyu-design/agents/gen-pptx
 npm test && npm run typecheck && npm run build

@@ -1,6 +1,6 @@
 ---
 name: product-demo-video
-description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, narrated with Doubao TTS over a ducked music bed, rendered to 16:9 MP4 with HyperFrames. Use when the user wants a product demo, feature walkthrough, explainer, or promo video that goes beyond a plain screen recording, especially for Obsidian plugins or other Svelte/React web UIs whose source is available.
+description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, narrated with Doubao TTS over a ducked music bed, rendered to 16:9 MP4 with HyperFrames. Also finishes the user's own narrated screen recordings (recorded mode): denoises the voice, captions it with Doubao ASR, suggests retake and pause cuts, and joins the clips with brand chapter cards that summarize the next clip. Use when the user wants a product demo, feature walkthrough, explainer, or promo video, especially for Obsidian plugins or other Svelte/React web UIs whose source is available, or wants one or more self-recorded videos denoised, subtitled, trimmed, and joined with transition cards.
 ---
 
 # Product demo video
@@ -11,9 +11,23 @@ Rebuild the product's UI from its **real components** instead of recording the s
 
 | Situation | Approach |
 |---|---|
+| The user recorded the clips with their own voice and wants them finished | **Recorded mode**: follow [references/recorded.md](references/recorded.md); the stage, storyboard, and TTS workflow below does not apply |
 | Source available; view components are mostly props → view | This skill: real components + scripted state + explainer |
 | Only the binary, or the flow depends on OS/native UI | Screen recording as `<video>` in HyperFrames + GSAP overlays (mask rounded corners with `overflow: hidden` + `border-radius` on a wrapper; zoom an inner layer) |
 | One-off, speed over polish | Auto-zoom recorder or a manual editor |
+
+**Recorded mode** in short: put the takes in `records/`, write `recorded/<id>/project.json`, then
+
+```text
+- [ ] 1. rec:audio      DeepFilterNet denoise, static gain to -16 LUFS (the user's own voice is kept)
+- [ ] 2. rec:asr        Doubao ASR on the original take, with hotwords
+- [ ] 3. rec:captions   one-line cues, fillers removed; retake / pause / head / tail cut suggestions
+- [ ] 4. Review with the user: proofread cues, confirm cuts, write each chapter title + summary from the next clip
+- [ ] 5. rec:cards      intro, a 3 s chapter card before every clip (part n/total, title, summary), outro, rendered with HyperFrames
+- [ ] 6. rec:assemble   --draft first, then full: cuts, crossfades, burned captions, optional ducked bed, .srt
+```
+
+Music is off by default; ask whether the user wants the series bed under their voice.
 
 Agree with the user before building:
 
@@ -94,6 +108,7 @@ The UI is the evidence; the explainer is the reading aid. Layout and recipes are
 | `scripts/tts.mjs` | Synthesizes `audio.json` lines (raw takes billed once), trims their silence, sets them to -21 LUFS, writes `voice.json` | Reuse as is |
 | `scripts/loudnorm.mjs` | Two-pass loudness: the music bed before build, the final MP4 after render | Reuse as is |
 | `scripts/build-episodes.mjs` | Bundles episodes; writes `<audio>` tracks and `data-duration` from `clock.ts` | Reuse as is |
+| `scripts/rec-*.mjs`, `recorded-lib.mjs`, `recorded-text.mjs`, `src/recorded/card.{html,ts}` | Recorded mode: audio, ASR, captions and cuts, cards, assembly ([references/recorded.md](references/recorded.md)) | Reuse as is |
 | `scripts/*.mjs` (others) | Snapshot, theme import, wordmark, preview/screenshot/inspect tools, HyperFrames wrapper | Paths, font list |
 
 Copy the product's brand icon (e.g. the site favicon) and brand font rather than inventing new ones.
@@ -141,9 +156,12 @@ Check the sound as in [references/voice.md](references/voice.md#verify): one aud
 
 State the output path, duration (effective demo vs. brand), and what each beat shows in the UI and the explainer; the speaker id, characters billed in this run, voice seconds, the music track with its license, and the measured loudness; list deliberate deviations from the real app (omitted folders, hidden caret, font weight substitutions) and anything not verified against the real DOM.
 
+For recorded mode, report the output and `.srt` paths, the final duration and each segment's length, the cuts applied and declined, the corrections made to the captions, ASR minutes billed in this run, and the measured loudness.
+
 ## Additional resources
 
+- [references/recorded.md](references/recorded.md): recorded mode (the user's own takes): project.json, pipeline, review step, setup, recording tips, verification, lessons
 - [references/hyperframes.md](references/hyperframes.md): composition contract, seek hook, bundling, browser, render pitfalls
 - [references/obsidian.md](references/obsidian.md): theme export, fonts, snapshot, shim, shell DOM, Obsidian-specific pitfalls
 - [references/motion.md](references/motion.md): landscape layout, motion feel, explainer and choreography patterns, timing, brand intro/outro
-- [references/voice.md](references/voice.md): narration and music pipeline (speaker choice, lines, timing from takes, music bed and ducking, mastering, verification) and the Doubao TTS protocol and credentials
+- [references/voice.md](references/voice.md): narration and music pipeline (speaker choice, lines, timing from takes, music bed and ducking, mastering, verification) and the Doubao TTS and ASR protocols and credentials

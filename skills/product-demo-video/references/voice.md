@@ -136,6 +136,7 @@ The purchased account was verified with one sentence: `SessionFinished` billed 9
 | `VOLC_TTS_RESOURCE_ID` | `verify.mjs` only; default `seed-tts-2.0` (语音合成 2.0 字符版). Episodes set `voice.resourceId` in `audio.json`. |
 | `VOLC_TTS_SPEAKER` | `verify.mjs` only. Never an episode default. |
 | `VOLC_TTS_TEXT` | `verify.mjs` only; optional check line. |
+| `VOLC_ASR_RESOURCE_ID` | `rec-asr.mjs` only; default `volc.seedasr.auc` ([ASR](#capability-asr-protocol)). |
 
 ### Call
 
@@ -207,3 +208,43 @@ Server audio uses header byte 1 = `0xB4` (audio-only, with event), raw bytes, ev
 - `ConnectionStarted`, then `SessionStarted`, then one or more `TTSResponse` chunks, then `SessionFinished`.
 - `usage.text_words` equal to the Unicode length of the spoken text, including punctuation (`tts.mjs` warns otherwise).
 - An MP3 that starts with `ID3` or `0xFF` and is longer than a few hundred bytes.
+
+## Capability: ASR protocol
+
+Recorded mode ([recorded.md](recorded.md)) transcribes the user's takes with Doubao recording-file ASR (豆包录音文件识别 2.0) through `templates/scripts/rec-asr.mjs`, with the same credentials file and auth headers as TTS. Verified on two takes of about 1 min each: per-word timestamps, punctuation, and fillers kept in the text (`rec-captions.mjs` removes them). Official protocol: 豆包语音 docs, 录音文件识别大模型 → 标准版 API (submit/query).
+
+- **Resource**: `volc.seedasr.auc` (submit + query). The flash endpoint (`volc.bigasr.auc_turbo`) answered `45000030` (resource not granted) on this account; enabling 录音文件识别 in the console grants the standard one.
+- **Input**: the aligned original take (`work/<clip>.orig.wav`), high-passed and set to -20 LUFS, as 16 kHz mono MP3 sent inline as base64. Never the denoised take: DeepFilterNet's artifacts turned whole phrases into nonsense, while the raw take came back nearly clean.
+- **Billing**: per audio duration. Results are cached in `work/<clip>.asr.json` by audio content, hotwords, and resource id; `--force` re-bills.
+
+### Call
+
+`POST https://openspeech.bytedance.com/api/v3/auc/bigmodel/submit`, then poll `POST …/query` every 2 s with the same headers and body `{}`.
+
+| Header | Value |
+|---|---|
+| `X-Api-Key` | `VOLC_TTS_API_KEY` |
+| `X-Api-App-Key`, `X-Api-Access-Key` | Legacy pair, in place of `X-Api-Key` |
+| `X-Api-Resource-Id` | `volc.seedasr.auc` |
+| `X-Api-Request-Id` | A new UUID per file, the same for submit and query |
+| `X-Api-Sequence` | `-1` |
+
+Submit body:
+
+```json
+{
+  "user": { "uid": "product-demo-video" },
+  "audio": { "data": "<base64 mp3>", "format": "mp3" },
+  "request": {
+    "model_name": "bigmodel",
+    "enable_itn": true,
+    "enable_punc": true,
+    "show_utterances": true,
+    "corpus": { "context": "{\"hotwords\":[{\"word\":\"Card Workspace\"}]}" }
+  }
+}
+```
+
+The status is in the `X-Api-Status-Code` response header: `20000000` done (the query body's `result` has `text` and `utterances[].words[]` with `start_time`/`end_time` in ms), `20000001`/`20000002` still processing, anything else an error (quote `X-Api-Message` and `X-Tt-Logid`).
+
+Hotwords help with UI terms but did not fix a misheard product name ("Card Workspace" came back as "Color Workspace"); `project.corrections` in recorded mode replaces such spellings in the cues.

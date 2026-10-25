@@ -12,7 +12,12 @@
     "build": "node scripts/build-episodes.mjs",
     "hf": "node scripts/hf.mjs",
     "check": "tsc --noEmit",
-    "build:wordmark": "node scripts/build-wordmark.mjs"
+    "build:wordmark": "node scripts/build-wordmark.mjs",
+    "rec:audio": "node scripts/rec-audio.mjs",
+    "rec:asr": "node scripts/rec-asr.mjs",
+    "rec:captions": "node scripts/rec-captions.mjs",
+    "rec:cards": "node scripts/rec-cards.mjs",
+    "rec:assemble": "node scripts/rec-assemble.mjs"
   },
   "devDependencies": {
     "@fontsource-variable/archivo": "^5.3.0",
