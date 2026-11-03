@@ -47,7 +47,7 @@ project.clips.forEach((clip, i) => {
 });
 if (project.outro !== false) {
   const written = 0.8 + (glyphs - 1) * 0.13 + 0.95 + 0.5;
-  cards.push({ name: "outro", kind: "outro", tagline: project.tagline ?? "", duration: round(written + 1.4), fade });
+  cards.push({ name: "outro", kind: "outro", tagline: project.tagline ?? "输入，汇集，整理，重构 —— 理解", duration: round(written + 1.4), fade });
 }
 
 const bundle = hashFile(`${stage}/assets/app.js`);

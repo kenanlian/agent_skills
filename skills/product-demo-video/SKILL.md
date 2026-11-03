@@ -1,6 +1,6 @@
 ---
 name: product-demo-video
-description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, narrated with Doubao TTS over a ducked music bed, rendered to 16:9 MP4 with HyperFrames. Also finishes the user's own narrated screen recordings (recorded mode): denoises the voice, captions it with Doubao ASR, suggests retake and pause cuts, and joins the clips with brand chapter cards that summarize the next clip. Use when the user wants a product demo, feature walkthrough, explainer, or promo video, especially for Obsidian plugins or other Svelte/React web UIs whose source is available, or wants one or more self-recorded videos denoised, subtitled, trimmed, and joined with transition cards.
+description: Produce animated feature demo and promo videos for the user's own software by mounting its real UI components in a browser stage, driving their state from a seekable script, and pairing it with a flat explainer layer (mechanism illustrations, leaders, live counts) plus cursor, camera push-ins, spotlight, captions, and a brand intro/outro choreographed with GSAP, narrated with Doubao TTS over a ducked music bed, rendered to 16:9 MP4 with HyperFrames. Also finishes the user's own narrated screen recordings (recorded mode) --- denoises the voice, captions it with Doubao ASR, suggests retake and pause cuts, and joins the clips with brand chapter cards that summarize the next clip. Use when the user wants a product demo, feature walkthrough, explainer, or promo video, especially for Obsidian plugins or other Svelte/React web UIs whose source is available, or wants one or more self-recorded videos denoised, subtitled, trimmed, and joined with transition cards.
 ---
 
 # Product demo video
@@ -32,7 +32,8 @@ Music is off by default; ask whether the user wants the series bed under their v
 Agree with the user before building:
 
 - **Format**: landscape 1920 × 1080 at 60 fps is the default (Bilibili, Xiaohongshu). Vertical 1080 × 1920 only on request.
-- **Series or single video**, captions, and the brand lines.
+- **Series or single video**, captions, and the intro topic line.
+- **End-card tagline** is fixed for every episode, in both modes: 输入，汇集，整理，重构 —— 理解. Don't ask for it or vary it per episode ([references/motion.md](references/motion.md#brand-intro-and-outro)).
 - **Voice, every episode**: ask the user for the TTS speaker id before synthesizing anything. Never reuse the last episode's voice or an env default. Audition one line before synthesizing the rest ([references/voice.md](references/voice.md#voice-ask-every-episode)).
 - **Narration**: each caption is its spoken line; a line may override only its pronunciation (`say`). The intro speaks the plugin name plus the episode topic; the outro is not narrated.
 - **Music**: the series bed is Somewhere Sunny (ver 2) (Kevin MacLeod, CC BY 4.0, credit in the description); change it only if the user asks ([references/voice.md](references/voice.md#choosing-music)).

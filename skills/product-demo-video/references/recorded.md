@@ -31,7 +31,6 @@ renders/<id>.final.mp4, renders/<id>.srt
   "title": "快速输入",
   "subtitle": "功能讲解",
   "kicker": "CARD WORKSPACE · 功能讲解",
-  "tagline": "汇集，整理，重构 —— 理解",
   "theme": { "accent": [199.5, 90.6, 45.9], "font": "霞鹜文楷" },
   "hotwords": ["Card Workspace", "Obsidian", "快速输入"],
   "corrections": { "Color Workspace": "Card Workspace" },
@@ -46,7 +45,7 @@ renders/<id>.final.mp4, renders/<id>.srt
 |---|---|
 | `title`, `subtitle` | Intro card: wordmark, then the title (topic) and subtitle |
 | `kicker` | Small accent line on each chapter card; default `title` |
-| `tagline` | Outro line under the written wordmark |
+| `tagline` | Outro line under the written wordmark; omit it, the series line 输入，汇集，整理，重构 —— 理解 is the default |
 | `theme.accent` | The app's accent as `[h, s, l]`; required. Read it from a built episode: `node scripts/eval.mjs <url> "getComputedStyle(document.body).getPropertyValue('--accent-h')"` (and `-s`, `-l`) |
 | `theme.font` | Card font family, loaded from `theme/fonts.css` (the interface font) |
 | `hotwords` | ASR context: product names and UI terms |
