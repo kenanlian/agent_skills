@@ -237,7 +237,7 @@ function buildTimeline(): gsap.core.Timeline {
   tl.to(".blob-a", { x: 180, y: 110, duration: T.end, ease: "sine.inOut" }, 0);
   tl.to(".blob-b", { x: -160, y: -90, duration: T.end, ease: "sine.inOut" }, 0);
 
-  // Intro: the brand is already on screen at frame 0; only the topic line arrives.
+  // Intro: the brand is already on screen at frame 0; only the hook line arrives.
   tl.fromTo("#intro .brand-tagline", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "sine.out" }, T.introTagline);
   tl.to("#intro", { y: -40, opacity: 0, duration: 0.5, ease: "power2.in" }, T.introOut);
 
@@ -333,6 +333,7 @@ function buildTimeline(): gsap.core.Timeline {
   animateLogo(tl, endBrand.logo, T.endCard);
   const written = animateWordmark(tl, endBrand.wordmark, T.endCard + 0.5);
   tl.fromTo("#endcard .brand-tagline", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "sine.out" }, written - 0.6);
+  tl.fromTo("#endcard .brand-cta", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "sine.out" }, written - 0.1);
   tl.set({}, {}, T.end);
   return tl;
 }

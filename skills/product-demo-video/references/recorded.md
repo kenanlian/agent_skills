@@ -20,18 +20,17 @@ records/                       raw recordings (gitignored; large)
 recorded/<id>/project.json     clips, titles, summaries, hotwords, corrections, theme
 recorded/<id>/captions.json    proofread cues + cut decisions (the source of truth; commit it)
 recorded/<id>/work/            generated: orig/clean wav, asr.json (billed, cached), freeze.json, cards/, captions.ass
-fonts/                         the caption font (gitignored; licensed)
-renders/<id>.final.mp4, renders/<id>.srt
+fonts/                         the caption font (gitignored; npm run fetch:fonts)
+renders/<id>.final.mp4, renders/<id>.srt, renders/<id>.chapters.txt
 ```
 
 ## project.json
 
 ```json
 {
-  "title": "快速输入",
-  "subtitle": "功能讲解",
+  "title": "灵感再也不会溜走",
+  "subtitle": "快速输入 · 功能讲解",
   "kicker": "CARD WORKSPACE · 功能讲解",
-  "theme": { "accent": [199.5, 90.6, 45.9], "font": "霞鹜文楷" },
   "hotwords": ["Card Workspace", "Obsidian", "快速输入"],
   "corrections": { "Color Workspace": "Card Workspace" },
   "clips": [
@@ -43,11 +42,12 @@ renders/<id>.final.mp4, renders/<id>.srt
 
 | Field | Use |
 |---|---|
-| `title`, `subtitle` | Intro card: wordmark, then the title (topic) and subtitle |
-| `kicker` | Small accent line on each chapter card; default `title` |
+| `title`, `subtitle` | Intro card: wordmark, then the title (the hook, ≤ 12 characters at 40 px; [messaging.md](messaging.md#hook)) and the subtitle (the topic) |
+| `kicker` | Small accent line on each chapter card; default `title`. Set it to the topic when `title` is a hook |
 | `tagline` | Outro line under the written wordmark; omit it, the series line 输入，汇集，整理，重构 —— 理解 is the default |
-| `theme.accent` | The app's accent as `[h, s, l]`; required. Read it from a built episode: `node scripts/eval.mjs <url> "getComputedStyle(document.body).getPropertyValue('--accent-h')"` (and `-s`, `-l`) |
-| `theme.font` | Card font family, loaded from `theme/fonts.css` (the interface font) |
+| `cta` | Small call-to-action line under the tagline; omit it, the series line 在 Obsidian 第三方插件市场搜索 Card Workspace is the default; `""` drops it. With it, the outro holds 1 s longer |
+| `theme.accent` | Override for the series accent `[h, s, l]` in `style.json`; omit it. To read an app's accent: `node scripts/eval.mjs <url> "getComputedStyle(document.body).getPropertyValue('--accent-h')"` (and `-s`, `-l`) |
+| `theme.font` | Override for the card font family; default `style.json` `fonts.interface`. It must be declared in `theme/fonts.css` |
 | `hotwords` | ASR context: product names and UI terms |
 | `corrections` | Exact replacements applied to cue text, keyed by what ASR wrote (see the `asr:` column of the review listing). Hotwords alone did not fix a misheard product name; this map does |
 | `clips[].id`, `file` | Clip order is the video order; `file` is relative to the project root |
@@ -57,7 +57,7 @@ renders/<id>.final.mp4, renders/<id>.srt
 | `intro`, `outro` | `false` drops that card |
 | `transition` | Crossfade seconds between segments; default `0.4` |
 | `size`, `fps` | Output size; default the first clip's size, 60 fps |
-| `captions` | `{ font, fontsDir, size, marginV }`; default HarmonyOS Sans SC from `fonts/`, 4.2 % of the height, 6 % bottom margin |
+| `captions` | `{ font, fontsDir, size, marginV }`; default `style.json` `fonts.captions` (HarmonyOS Sans SC) from `fonts/`, 4.2 % of the height, 6 % bottom margin |
 | `bgm` | Optional music bed `{ file, offset, volume }`, off by default; `volume` default `0.35`, ducked under the voice |
 
 ## Pipeline
@@ -69,8 +69,11 @@ npm run rec:captions -- <id>   # cues + cut suggestions → captions.json (or ca
 # review step (below)
 npm run rec:cards -- <id>      # intro / chapter / outro cards with HyperFrames → work/cards/
 npm run rec:assemble -- <id> --draft   # 1280 px fast preview → renders/<id>.draft.mp4
-npm run rec:assemble -- <id>           # full size, mastered → renders/<id>.final.mp4 + renders/<id>.srt
+npm run rec:assemble -- <id>           # full size, mastered → renders/<id>.final.mp4 + .srt + .chapters.txt
+node scripts/cover.mjs covers/<id>.html   # cover for both platforms (messaging.md#cover)
 ```
+
+Then write the publish package ([messaging.md](messaging.md#publish-package)).
 
 Each step takes `--clip <id>` where it makes sense (`rec:audio`, `rec:asr`) and skips unchanged work. Two clips of about 1 min each took 31 s for the draft and 84 s for the full assembly; the cards took about 37 s.
 
@@ -87,7 +90,7 @@ Each step takes `--clip <id>` where it makes sense (`rec:audio`, `rec:asr`) and 
 A cut over a static screen (ffmpeg `freezedetect`) is invisible; over a moving screen it jumps, so it is proposed but not applied. The first take of a retake is also left out of the captions.
 
 - **rec:cards** puts a chapter card before every clip, 3 s on the final timeline by default (`chapterSeconds`; the file is one crossfade longer, since the crossfades overlap it). Everything is in by about 0.4 s and fully readable for about 2.1 s; all text leaves before the outgoing crossfade, so only the card's background dissolves into the recording. At 2 s only about 1.2 s is left to read the summary. Review the PNG stills in `work/cards/` before assembling.
-- **rec:assemble** is one ffmpeg pass: cuts with 10 ms audio fades, crossfades, captions retimed onto the final timeline (each held 0.5 s for reading, never overlapping the next), the optional ducked bed, then `loudnorm.mjs` to -16 LUFS.
+- **rec:assemble** is one ffmpeg pass: cuts with 10 ms audio fades, crossfades, captions retimed onto the final timeline (each held 0.5 s for reading, never overlapping the next), the optional ducked bed, then `loudnorm.mjs` to -16 LUFS. It also writes `renders/<id>.chapters.txt`: one mark per clip, at the chapter card that announces it, titled with `clips[].title`, the first moved to 0:00. When YouTube would ignore the list (fewer than three chapters, or one under 10 s), it says why; Bilibili's 分段章节 takes the marks either way.
 
 ## Review step
 
@@ -100,11 +103,11 @@ The draft captions and cuts are proposals; go through them with the user before 
 
 ## Setup
 
-- **Project**: the series' existing video project, or one scaffolded from `templates/` (step 2 of the main workflow). Recorded mode needs its brand (`src/stage/brand.ts`, `src/generated/wordmark.json` from `npm run build:wordmark`), `theme/fonts.css` from `npm run import:theme`, and the `rec-*` scripts.
+- **Project**: the series' existing video project, or one scaffolded from `templates/` (step 2 of the main workflow). Recorded mode needs its brand (`src/stage/brand.ts`, `src/generated/wordmark.json` from `npm run build:wordmark`), `theme/` (committed, or `npm run import:theme`), its fonts from `npm run fetch:fonts`, and the `rec-*` scripts.
 - **DeepFilterNet**: the standalone binary, no Python or model download. `rec:audio` prints the install command when it is missing:
   `curl -L -o ~/.local/share/deepfilter/deep-filter https://github.com/Rikorose/DeepFilterNet/releases/download/v0.5.6/deep-filter-0.5.6-x86_64-unknown-linux-musl && chmod +x ~/.local/share/deepfilter/deep-filter` (override the path with `DEEP_FILTER`).
 - **ASR credentials**: shared with TTS in `~/.config/volc-tts/env`; the account needs the 豆包录音文件识别 resource ([voice.md](voice.md#capability-asr-protocol)).
-- **Caption font**: a bold CJK sans copied into `fonts/` (gitignored). On Windows/WSL: `cp /mnt/c/Windows/Fonts/HarmonyOS_Sans_SC_Bold.ttf fonts/`. Another family works through `project.captions.font`; `rec:assemble` checks the family with `fc-scan` before encoding.
+- **Caption font**: `npm run fetch:fonts` downloads HarmonyOS Sans SC Bold from Huawei's official package into `fonts/` (gitignored: its license forbids redistributing the file on its own) and checks its hash. Another family needs a `style.json` entry (see [obsidian.md](obsidian.md#style-lock-templatesstylejson)) and `project.captions.font`; `rec:assemble` checks the hash, then the family with `fc-scan`, before encoding.
 
 ## Recording tips
 

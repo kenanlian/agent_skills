@@ -5,6 +5,7 @@
   "description": "Product demo videos rendered with HyperFrames from the app's real UI components.",
   "scripts": {
     "snapshot:vault": "node scripts/snapshot-vault.mjs",
+    "fetch:fonts": "node scripts/fetch-fonts.mjs",
     "import:theme": "node scripts/import-theme.mjs",
     "dev": "vite",
     "tts": "node scripts/tts.mjs",

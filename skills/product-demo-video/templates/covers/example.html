@@ -1,0 +1,218 @@
+<!doctype html>
+<!--
+  Cover for one episode, separate from its first frame. scripts/cover.mjs renders it twice:
+  ?ratio=4x3 at 1440 x 1080 for Bilibili and ?ratio=16x9 at 1920 x 1080 (exported at 1280 x 720) for YouTube.
+  Every title, snippet, and count on it is read from the episode's snapshot, or the subject is a
+  3x screenshot of the stage; it promises only what the video shows (references/messaging.md#cover).
+-->
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <title>封面 · 01 全文搜索（笔记一多就找不到：大搜索框 + 命中卡片）</title>
+    <link rel="stylesheet" href="../theme/fonts.css" />
+    <script>
+      document.documentElement.dataset.ratio = new URLSearchParams(location.search).get("ratio") ?? "4x3";
+    </script>
+    <style>
+      @font-face {
+        font-family: "Archivo";
+        font-weight: 100 900;
+        src: url("../node_modules/@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2") format("woff2");
+      }
+
+      :root {
+        /* The captured theme's accent and interface font. */
+        --accent-h: 199.5;
+        --accent-s: 90.6%;
+        --accent-l: 45.9%;
+        --accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+        --accent-soft: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.18);
+        --ink: #1a2330;
+        --muted: #6b7684;
+        --ink-shadow: 30 40 64;
+        --highlight: rgba(255, 208, 0, 0.42);
+        --cover-font: "LXGW WenKai", sans-serif;
+        --width: 1440px;
+        --subject: 1100px;
+      }
+      html[data-ratio="16x9"] {
+        --width: 1920px;
+        --subject: 1500px;
+      }
+      html,
+      body {
+        margin: 0;
+        width: var(--width);
+        height: 1080px;
+        overflow: hidden;
+      }
+      #cover {
+        position: relative;
+        width: var(--width);
+        height: 1080px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #eef3f9 0%, #f4f6fa 100%);
+        color: var(--ink);
+        font-family: var(--cover-font);
+      }
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.22), transparent 62%);
+      }
+      .blob-a { width: 1000px; height: 1000px; right: -360px; bottom: -420px; }
+      .blob-b { width: 900px; height: 900px; left: -420px; top: -460px; opacity: 0.7; }
+
+      /* Secondary, so it may sit in the strip Bilibili's 16:9 crop removes. */
+      .badge {
+        position: absolute;
+        left: 56px;
+        top: 48px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: "Archivo", sans-serif;
+        font-size: 34px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .badge img { display: block; }
+      .badge .platform { width: 50px; height: 50px; }
+      .badge .product { width: 54px; height: 54px; border-radius: 13px; box-shadow: 0 6px 14px rgb(var(--ink-shadow) / 0.22); }
+      .badge .plus { color: var(--muted); font-weight: 300; font-size: 40px; margin: 0 -2px; }
+
+      /* The hook, 6-10 characters, with one phrase in the accent. */
+      .headline {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 136px;
+        margin: 0;
+        text-align: center;
+        font-size: 140px;
+        font-weight: 500;
+        line-height: 1.1;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .headline em {
+        position: relative;
+        z-index: 0;
+        font-style: normal;
+        color: var(--accent);
+      }
+      .headline em::after {
+        content: "";
+        position: absolute;
+        left: -0.04em;
+        right: -0.02em;
+        bottom: 0.04em;
+        height: 0.32em;
+        border-radius: 0.2em 0.08em 0.24em 0.1em;
+        background: repeating-linear-gradient(-58deg, hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.42) 0 3px, transparent 3px 11px);
+        transform: rotate(-1.2deg);
+        z-index: -1;
+      }
+
+      /* One subject from the episode, enlarged: here the query and two of its real hits. */
+      .subject {
+        position: absolute;
+        left: calc((var(--width) - var(--subject)) / 2);
+        top: 380px;
+        width: var(--subject);
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        height: 104px;
+        box-sizing: border-box;
+        padding: 0 22px 0 34px;
+        border-radius: 999px;
+        background: #fff;
+        border: 5px solid var(--accent);
+        box-shadow: 0 0 0 14px var(--accent-soft), 0 26px 50px rgb(var(--ink-shadow) / 0.18);
+        font-size: 54px;
+        font-weight: 500;
+      }
+      .search .query { flex: 1; }
+      .search .count {
+        padding: 6px 24px 8px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 30px;
+      }
+      .search .count b { font-family: "Archivo", sans-serif; font-size: 44px; font-weight: 700; }
+      .hits {
+        display: flex;
+        gap: 48px;
+        margin-top: 110px;
+      }
+      .card {
+        flex: 1;
+        box-sizing: border-box;
+        padding: 22px 28px 18px;
+        border-radius: 24px;
+        background: #fff;
+        border: 2px solid #e1e6ec;
+        box-shadow: 0 16px 36px rgb(var(--ink-shadow) / 0.12), 0 2px 6px rgb(var(--ink-shadow) / 0.06);
+      }
+      .card-title { font-size: 36px; font-weight: 500; white-space: nowrap; }
+      .card-snip { margin: 10px -12px 0; padding: 8px 12px; font-size: 27px; line-height: 1.5; color: #2b3542; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card-snip + .card-snip { margin-top: 0; border-top: 2px solid #edf0f4; }
+      mark { padding: 0 3px; border-radius: 5px; background: var(--highlight); color: inherit; font-weight: 500; }
+
+      .tag {
+        position: absolute;
+        z-index: 2;
+        padding: 6px 30px 10px;
+        border-radius: 999px;
+        font-size: 44px;
+        font-weight: 500;
+        line-height: 1.1;
+        color: #fff;
+        white-space: nowrap;
+        background: var(--ink);
+        box-shadow: 0 10px 24px rgb(var(--ink-shadow) / 0.22);
+      }
+      .tag-accent { background: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div id="cover">
+      <div class="blob blob-a"></div>
+      <div class="blob blob-b"></div>
+
+      <div class="badge">
+        <img class="platform" src="assets/obsidian-logo.svg" alt="Obsidian" />
+        <span class="plus">+</span>
+        <img class="product" src="assets/card-workspace.svg" alt="Card Workspace" />
+        <span>Card Workspace</span>
+      </div>
+
+      <h1 class="headline">笔记再多，<em>一搜就有</em></h1>
+
+      <div class="subject">
+        <div class="search">
+          <span class="query">merge</span>
+          <span class="count"><b>3</b> 张卡片命中</span>
+        </div>
+        <div class="hits">
+          <div class="card">
+            <div class="card-title">命中的笔记标题</div>
+            <div class="card-snip">…命中片段里的 <mark>merge</mark> 原样高亮…</div>
+            <div class="card-snip">…同一篇里第二处 <mark>merge</mark>…</div>
+          </div>
+          <div class="card">
+            <div class="card-title">另一篇命中的笔记</div>
+            <div class="card-snip">…第二篇的 <mark>merge</mark> 命中上下文…</div>
+            <div class="card-snip">…片段按出现顺序排列…</div>
+          </div>
+        </div>
+        <span class="tag" style="left: -24px; top: 138px">命中片段直接显示</span>
+        <span class="tag tag-accent" style="right: -24px; top: 138px">每张标出命中数</span>
+      </div>
+    </div>
+  </body>
+</html>

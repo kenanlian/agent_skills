@@ -224,3 +224,29 @@ export function retime(list, keep, duration) {
 export function round(t) {
   return Math.round(t * 100) / 100;
 }
+
+/** YouTube shows description chapters only when every chapter lasts at least this long. */
+export const CHAPTER_MIN = 10;
+
+/**
+ * Description chapters, one per clip ({ start, title } in timeline order). The first
+ * mark moves to 0:00 so the intro belongs to the first chapter. `problem` says why
+ * YouTube would ignore the list (it needs at least three chapters of CHAPTER_MIN s),
+ * or is null; Bilibili's 分段章节 takes the same marks either way.
+ */
+export function chapterMarks(entries, total) {
+  const marks = entries.map((e, i) => ({ start: i === 0 ? 0 : Math.round(e.start), title: e.title }));
+  const short = marks.find((m, i) => (marks[i + 1]?.start ?? total) - m.start < CHAPTER_MIN);
+  const problem = marks.length < 3
+    ? `${marks.length} chapter${marks.length === 1 ? "" : "s"}; YouTube needs at least 3`
+    : short ? `"${short.title}" is shorter than ${CHAPTER_MIN} s` : null;
+  return { lines: marks.map((m) => `${timestamp(m.start)} ${m.title}`), problem };
+}
+
+/** 0:05, 12:30, 1:02:03 */
+export function timestamp(seconds) {
+  const s = Math.floor(seconds);
+  const mm = Math.floor(s / 60) % 60;
+  const ss = String(s % 60).padStart(2, "0");
+  return s >= 3600 ? `${Math.floor(s / 3600)}:${String(mm).padStart(2, "0")}:${ss}` : `${mm}:${ss}`;
+}

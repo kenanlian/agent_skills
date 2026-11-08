@@ -8,6 +8,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { build } from "vite";
 import { fail, hashFile, hashOf, loadProject, outputSize, root, run } from "./recorded-lib.mjs";
+import { fontFiles, loadStyle, requireFonts } from "./style-lock.mjs";
 
 const { values: args, positionals } = parseArgs({ options: { only: { type: "string" } }, allowPositionals: true });
 const { work, project } = loadProject(positionals[0]);
@@ -15,9 +16,11 @@ const size = outputSize(project);
 const fps = project.fps ?? 60;
 const fade = project.transition ?? 0.4;
 if (Math.abs(size.width / size.height - 16 / 9) > 0.01) console.warn(`warning: cards are laid out for 16:9; the clips are ${size.width} x ${size.height}`);
+const style = loadStyle();
 const theme = project.theme ?? {};
-const [h, s, l] = theme.accent ?? fail("project.json: set theme.accent to the app's accent as [h, s, l] (see references/recorded.md)");
-const font = theme.font ? `"${theme.font}", sans-serif` : "sans-serif";
+const [h, s, l] = theme.accent ?? style.accent;
+const family = theme.font ?? style.fonts.interface;
+const font = `"${family}", sans-serif`;
 
 const stage = `${work}/cards/stage`;
 await mkdir(`${stage}/assets`, { recursive: true });
@@ -27,8 +30,10 @@ await build({
   build: { outDir: `${stage}/assets`, emptyOutDir: false, lib: { entry: `${root}src/recorded/card.ts`, formats: ["iife"], name: "Card", fileName: () => "app.js" } },
 });
 if (!existsSync(`${root}theme/fonts.css`)) fail("theme/ is missing; run `npm run import:theme` first");
+if (!readFileSync(`${root}theme/fonts.css`, "utf8").includes(`font-family: "${family}"`)) fail(`theme/fonts.css declares no "${family}"; set project.theme.font to a family style.json pins`);
+requireFonts("theme/fonts", fontFiles(style, "theme"));
 await cp(`${root}theme/fonts.css`, `${stage}/assets/fonts.css`);
-if (!existsSync(`${stage}/assets/fonts`)) await cp(`${root}theme/fonts`, `${stage}/assets/fonts`, { recursive: true });
+await cp(`${root}theme/fonts`, `${stage}/assets/fonts`, { recursive: true });
 const template = await readFile(`${root}src/recorded/card.html`, "utf8");
 const glyphs = JSON.parse(readFileSync(`${root}src/generated/wordmark.json`, "utf8")).glyphs.length;
 const kicker = project.kicker ?? project.title ?? "";
@@ -47,7 +52,9 @@ project.clips.forEach((clip, i) => {
 });
 if (project.outro !== false) {
   const written = 0.8 + (glyphs - 1) * 0.13 + 0.95 + 0.5;
-  cards.push({ name: "outro", kind: "outro", tagline: project.tagline ?? "输入，汇集，整理，重构 —— 理解", duration: round(written + 1.4), fade });
+  const cta = project.cta ?? "在 Obsidian 第三方插件市场搜索 Card Workspace";
+  // The call to action settles 0.6 s after the wordmark and stays about 1.8 s to be read.
+  cards.push({ name: "outro", kind: "outro", tagline: project.tagline ?? "输入，汇集，整理，重构 —— 理解", cta, duration: round(written + (cta ? 2.4 : 1.4)), fade });
 }
 
 const bundle = hashFile(`${stage}/assets/app.js`);
@@ -55,7 +62,7 @@ const manifest = [];
 for (const card of cards) {
   const out = `${work}/cards/${card.name}.mp4`;
   const keyFile = `${work}/cards/${card.name}.key`;
-  const key = hashOf({ card, size, fps, theme, bundle, template });
+  const key = hashOf({ card, size, fps, theme: { accent: [h, s, l], font }, bundle, template });
   manifest.push({ name: card.name, kind: card.kind, before: card.before, file: out.slice(root.length), duration: card.duration });
   if (args.only && card.name !== args.only) continue;
   if (existsSync(out) && existsSync(keyFile) && readFileSync(keyFile, "utf8") === key) {

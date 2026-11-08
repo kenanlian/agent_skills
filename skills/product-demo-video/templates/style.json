@@ -1,0 +1,95 @@
+{
+  "$comment": "The series look, pinned so every machine renders the same videos and covers. Fonts are never committed: `npm run fetch:fonts` downloads each file below from its official source, checks its SHA-256, and installs it (`theme` fonts into every theme*/fonts/, the others into their `dir`). import:theme, build, rec:cards, rec:assemble, shot.mjs, and cover.mjs stop when a font is missing or differs.",
+  "accent": [
+    199.5,
+    90.6,
+    45.9
+  ],
+  "obsidian": {
+    "vault": "D:\\Kenan\\OBSIDIAN\\Card-Workspace-Docs",
+    "theme": {
+      "name": "Border",
+      "version": "1.13.8"
+    },
+    "plugins": {
+      "obsidian-style-settings": "1.0.9"
+    },
+    "styleSettings": {
+      "Appearance-light@@card-layout-open-light": true,
+      "Appearance-light@@accent-light": "#0B9ADF",
+      "Appearance-light@@accent-color-override-light": true
+    },
+    "appearance": {
+      "cssTheme": "Border",
+      "showRibbon": false,
+      "showViewHeader": false,
+      "textFontFamily": "霞鹜文楷",
+      "interfaceFontFamily": "霞鹜文楷",
+      "monospaceFontFamily": "Source Code Pro"
+    }
+  },
+  "fonts": {
+    "interface": "LXGW WenKai",
+    "brand": "Archivo",
+    "captions": "HarmonyOS Sans SC",
+    "files": [
+      {
+        "file": "LXGWWenKai-Light.ttf",
+        "use": "theme",
+        "families": [
+          "霞鹜文楷",
+          "LXGW WenKai"
+        ],
+        "weight": 300,
+        "url": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.501/LXGWWenKai-Light.ttf",
+        "sha256": "d56bcb00af46e1bcd6d2a337bb8e499fb5c8a3c2d65e26bfbd4ada04d22ae70d"
+      },
+      {
+        "file": "LXGWWenKai-Regular.ttf",
+        "use": "theme",
+        "families": [
+          "霞鹜文楷",
+          "LXGW WenKai"
+        ],
+        "weight": 400,
+        "url": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.312/LXGWWenKai-Regular.ttf",
+        "sha256": "fada21b81ddc620f3b8d27df3ad8c1aa9b3d829ed7b4de63256895e608f14c01"
+      },
+      {
+        "file": "LXGWWenKai-Medium.ttf",
+        "use": "theme",
+        "families": [
+          "霞鹜文楷",
+          "LXGW WenKai"
+        ],
+        "weight": 500,
+        "url": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.501/LXGWWenKai-Medium.ttf",
+        "sha256": "29980010123c02fc6b52895de5c816a13fac49546196db8f4854c1e102d69b48"
+      },
+      {
+        "file": "SourceCodePro-Regular.ttf",
+        "use": "theme",
+        "families": [
+          "Source Code Pro"
+        ],
+        "weight": 400,
+        "url": "https://github.com/adobe-fonts/source-code-pro/releases/download/2.030R-ro/1.050R-it/source-code-pro-2.030R-ro-1.050R-it.zip",
+        "member": "source-code-pro-2.030R-ro-1.050R-it/TTF/SourceCodePro-Regular.ttf",
+        "sha256": "50b50d9fad5a49ac34129b606027a80e1b7ccd799bb91734bb4f60cdaaeb0ac0"
+      },
+      {
+        "file": "HarmonyOS_Sans_SC_Bold.ttf",
+        "use": "captions",
+        "dir": "fonts",
+        "families": [
+          "HarmonyOS Sans SC"
+        ],
+        "weight": 700,
+        "url": "https://developer.huawei.com/images/download/general/HarmonyOS-Sans.zip",
+        "member": "HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.ttf",
+        "license": "HarmonyOS Sans/HarmonyOS_Sans_SC/LICENSE.txt",
+        "sha256": "43a424b85e47fb53a17b3b32026a71801f86f8e022ca6798d186b47d39fa5f01"
+      }
+    ]
+  }
+}

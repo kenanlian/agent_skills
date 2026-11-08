@@ -1,7 +1,7 @@
 // One full-frame card for a recorded video: the intro (brand + topic, static at
-// frame 0 so it doubles as the cover), a chapter card before each clip (part
-// number, title, a one-line summary of what the clip shows, progress),
-// or the outro (animated logo + wordmark write-on). scripts/rec-cards.mjs writes
+// frame 0), a chapter card before each clip (part number, title, a one-line
+// summary of what the clip shows, progress), or the outro (animated logo +
+// wordmark write-on, tagline, call to action). scripts/rec-cards.mjs writes
 // the data into window.__CARD and renders each card with HyperFrames.
 import gsap from "gsap";
 import { animateLogo, animateWordmark, renderLogo, renderWordmark } from "../stage/brand";
@@ -16,6 +16,7 @@ interface CardData {
   summary?: string;
   sub?: string;
   tagline?: string;
+  cta?: string;
   index?: number;
   total?: number;
 }
@@ -88,9 +89,11 @@ function buildTimeline(): gsap.core.Timeline {
     const logo = renderLogo(document.querySelector<HTMLElement>("#outro .brand-logo")!, "outro-logo");
     const wordmark = renderWordmark(document.querySelector<HTMLElement>("#outro .brand-wordmark")!);
     text("#outro .brand-tagline", card.tagline);
+    text("#outro .brand-cta", card.cta);
     animateLogo(tl, logo, 0.3);
     const written = animateWordmark(tl, wordmark, 0.8);
     tl.fromTo("#outro .brand-tagline", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "sine.out" }, written - 0.6);
+    if (card.cta) tl.fromTo("#outro .brand-cta", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "sine.out" }, written - 0.1);
   }
 
   tl.set({}, {}, end);

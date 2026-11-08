@@ -36,16 +36,16 @@ Raw Doubao takes carry about 0.4 s of silence at each end, and their loudness va
 {
   "voice": { "speaker": "<asked of the user>", "resourceId": "seed-tts-2.0" },
   "lines": [
-    { "id": "intro", "text": "Card Workspace，全文搜索" },
-    { "id": "open", "text": "点击工具栏的搜索按钮" },
+    { "id": "intro", "text": "笔记一多，想找的那篇总找不到？Card Workspace 全文搜索" },
+    { "id": "open", "text": "搜索就在工具栏，不用离开卡片流" },
     { "id": "result", "text": "只留下命中的卡片，并显示命中数", "say": "只留下命中的卡片，并显示命中数量" }
   ],
   "bgm": { "file": "audio/bgm/somewhere-sunny.mp3", "offset": 0 }
 }
 ```
 
-- **Intro line**: the plugin name plus this episode's topic (the `.title`), spoken over the brand card. The outro is not narrated.
-- **Beat lines**: one per storyboard beat, in order. `text` is the caption on screen and the spoken text; `main.ts` renders captions from `CAPTIONS`, so the two cannot drift.
+- **Intro line**: the hook, then the plugin name and this episode's topic (the `.title`), spoken over the brand card; the card shows the hook alone. Hook types and rules are in [messaging.md](messaging.md#hook). The outro is not narrated.
+- **Beat lines**: one per storyboard beat, in order. `text` is the caption on screen and the spoken text; `main.ts` renders captions from `CAPTIONS`, so the two cannot drift. Check them against [messaging.md](messaging.md#captions) before synthesis.
 - **`say`** overrides the spoken text of one line, only to fix pronunciation (an English term, a number, a polyphone). The caption keeps `text`. Keep the meaning identical.
 - Keep a caption to one line (≤ ~24 CJK characters). The verified voice speaks about 4–5 characters per second, so a full-length line is about 5 s.
 
@@ -84,7 +84,7 @@ Then take the peak of `lavfi.r128.S` per 5 s window. Example: Cherry Blossom is 
 
 The bed should feel calm, tidy, and lightly playful, like the flat geometric motion: soft electronic or light pop with plucks, marimba, kalimba, or soft electric piano over light percussion; 100–115 BPM; major key; no vocals; no drops, risers, or heavy low end; sparse in the 1–4 kHz band where the voice sits. Avoid epic cinematic, EDM, the corporate ukulele cliché, and lo-fi crackle that muddies speech. Prefer one track for the whole series so it becomes the brand's sound.
 
-The license must cover commercial use on Bilibili and Xiaohongshu. To replace the series bed, the user either supplies the file and confirms its license or asks you to choose. When asked to choose, shortlist from a library whose license you can state, and have the user listen before committing to it: you cannot judge feel from metadata. Avoid MusicGen output: its model weights are CC-BY-NC.
+The license must cover commercial use on Bilibili, YouTube, and Xiaohongshu. To replace the series bed, the user either supplies the file and confirms its license or asks you to choose. When asked to choose, shortlist from a library whose license you can state, and have the user listen before committing to it: you cannot judge feel from metadata. Avoid MusicGen output: its model weights are CC-BY-NC.
 
 - Kevin MacLeod's incompetech library is CC BY 4.0 (commercial use; credit required in the video description) and publishes a filterable index with `bpm`, `feel`, `instruments`, and `length` at `https://incompetech.com/music/royalty-free/pieces.json`; tracks download from `https://incompetech.com/music/royalty-free/mp3-royaltyfree/<filename>`. Credit line: `"<Title>" Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License`.
 - Pixabay returns 403 to scripted requests; the user has to download from it.

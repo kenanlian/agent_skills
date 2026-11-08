@@ -1,11 +1,11 @@
 {
   "voice": { "speaker": "", "resourceId": "seed-tts-2.0" },
   "lines": [
-    { "id": "intro", "text": "Card Workspace，全文搜索" },
-    { "id": "open", "text": "点击工具栏的搜索按钮" },
-    { "id": "type", "text": "输入关键词" },
-    { "id": "result", "text": "只留下命中的卡片，并显示命中数" },
-    { "id": "clear", "text": "清除关键词，回到完整卡片流" }
+    { "id": "intro", "text": "笔记一多，想找的那篇总找不到？Card Workspace 全文搜索" },
+    { "id": "open", "text": "搜索就在工具栏，不用离开卡片流" },
+    { "id": "type", "text": "输入一个关键词" },
+    { "id": "result", "text": "只留下命中的卡片，每张标出命中几处" },
+    { "id": "clear", "text": "清除关键词，完整卡片流原样回来" }
   ],
   "bgm": { "file": "audio/bgm/somewhere-sunny.mp3", "offset": 0 }
 }

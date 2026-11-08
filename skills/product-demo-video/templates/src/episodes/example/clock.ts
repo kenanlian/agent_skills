@@ -11,7 +11,7 @@ function shift<K extends string>(offset: number, times: Record<K, number>): Reco
   return Object.fromEntries(Object.entries<number>(times).map(([key, value]) => [key, value + offset])) as Record<K, number>;
 }
 
-/** The intro line (plugin name + topic) starts with the topic line; the card leaves once it is said. */
+/** The intro line (hook + plugin name + topic) starts with the hook line; the card leaves once it is said. */
 const INTRO_VOICE = 0.3;
 const intro = take(manifest, "intro");
 const introOut = Math.max(1.65, INTRO_VOICE + intro.duration + 0.25);

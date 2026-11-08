@@ -3,11 +3,13 @@ import test from 'node:test';
 import {
   MAX_WEIGHT,
   buildCues,
+  chapterMarks,
   dropCut,
   dropFillers,
   keepRanges,
   retime,
   suggestCuts,
+  timestamp,
   tokenize,
   weight,
 } from '../templates/scripts/recorded-text.mjs';
@@ -130,4 +132,23 @@ test('retime maps cues through the cuts, drops cut cues, and holds without overl
   assert.ok(Math.abs(cues[1].end - 3.5) < 1e-9);
   assert.ok(Math.abs(cues[2].end - 6.4) < 1e-9);
   assert.ok(Math.abs(retime([{ text: '丁', start: 9, end: 9.9 }], keep, 8)[0].end - 7.92) < 1e-9);
+});
+
+test('chapterMarks starts at 0:00, rounds marks, and flags lists YouTube would ignore', () => {
+  const ok = chapterMarks([
+    { start: 3.6, title: '打开快速输入' },
+    { start: 41.4, title: '内容保存到哪里' },
+    { start: 75.2, title: '换一个模板' },
+  ], 120);
+  assert.deepEqual(ok.lines, ['0:00 打开快速输入', '0:41 内容保存到哪里', '1:15 换一个模板']);
+  assert.equal(ok.problem, null);
+  assert.match(chapterMarks([{ start: 3, title: '甲' }, { start: 40, title: '乙' }], 90).problem, /at least 3/);
+  assert.match(chapterMarks([{ start: 0, title: '甲' }, { start: 30, title: '乙' }, { start: 36, title: '丙' }], 90).problem, /"乙" is shorter/);
+  assert.match(chapterMarks([{ start: 0, title: '甲' }, { start: 30, title: '乙' }, { start: 85, title: '丙' }], 90).problem, /"丙" is shorter/);
+});
+
+test('timestamp writes minutes and seconds, and hours past one hour', () => {
+  assert.equal(timestamp(5.9), '0:05');
+  assert.equal(timestamp(750), '12:30');
+  assert.equal(timestamp(3723), '1:02:03');
 });

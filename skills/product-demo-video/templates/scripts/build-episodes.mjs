@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "vite";
+import { fontFiles, loadStyle, requireFonts } from "./style-lock.mjs";
 
 const root = new URL("../", import.meta.url).pathname;
 const requested = process.argv.slice(2);
@@ -19,6 +20,7 @@ const episodes = requested.length > 0 ? requested : all;
 if (!existsSync(`${root}theme/obsidian.css`)) {
   throw new Error("theme/ is missing; run `npm run import:theme` first.");
 }
+requireFonts("theme/fonts", fontFiles(loadStyle(), "theme"));
 
 for (const id of episodes) {
   const outDir = `${root}episodes/${id}/assets`;

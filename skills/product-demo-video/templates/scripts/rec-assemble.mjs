@@ -3,14 +3,16 @@
 // cuts (captions.json), takes its clean voice (rec-audio), and gets its cues
 // burned in as one-line captions retimed onto the final timeline. An optional
 // music bed (project.bgm) is ducked under the voice. Then the mix is mastered to
-// -16 LUFS with loudnorm.mjs, and the captions are also written as an .srt.
+// -16 LUFS with loudnorm.mjs, and the captions are also written as an .srt, with
+// one description chapter per clip in renders/<id>.chapters.txt.
 // Usage: node scripts/rec-assemble.mjs <id> [--draft]
 //   --draft: 1280 px wide, fast encode, no mastering → renders/<id>.draft.mp4
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 import { parseArgs } from "node:util";
 import { fail, fmt, loadProject, outputSize, probe, root, run } from "./recorded-lib.mjs";
-import { keepRanges, retime } from "./recorded-text.mjs";
+import { chapterMarks, keepRanges, retime } from "./recorded-text.mjs";
+import { FETCH_HINT, fontFiles, loadStyle, requireFonts } from "./style-lock.mjs";
 
 const { values: args, positionals } = parseArgs({ options: { draft: { type: "boolean" } }, allowPositionals: true });
 const { id, dir, work, project } = loadProject(positionals[0]);
@@ -24,7 +26,9 @@ const full = outputSize(project);
 const size = args.draft ? { width: 1280, height: Math.round((1280 * full.height) / full.width / 2) * 2 } : full;
 const fps = project.fps ?? 60;
 const fade = project.transition ?? 0.4;
-const style = { font: "HarmonyOS Sans SC", fontsDir: "fonts", size: 0.042, marginV: 0.06, ...(project.captions ?? {}) };
+const lock = loadStyle();
+const style = { font: lock.fonts.captions, fontsDir: "fonts", size: 0.042, marginV: 0.06, ...(project.captions ?? {}) };
+if (style.fontsDir === "fonts") requireFonts("fonts", fontFiles(lock, "captions"));
 checkFont(style);
 
 // The sequence and each segment's place on the final timeline (crossfades overlap by `fade`).
@@ -55,6 +59,13 @@ const cues = segments.flatMap((s) => (s.type === "clip" ? s.cues.map((c) => ({ .
 mkdirSync(`${root}renders`, { recursive: true });
 writeFileSync(`${work}/captions.ass`, ass(cues, full));
 writeFileSync(`${root}renders/${id}.srt`, srt(cues));
+// A clip's chapter begins with the chapter card that announces it.
+const chapters = chapterMarks(segments.flatMap((s, k) => {
+  if (s.type !== "clip") return [];
+  const before = segments[k - 1];
+  return [{ start: before?.before === s.clip.id ? before.at : s.at, title: s.clip.title ?? s.clip.id }];
+}), total);
+writeFileSync(`${root}renders/${id}.chapters.txt`, `${chapters.lines.join("\n")}\n`);
 
 // Filter graph.
 const inputs = [];
@@ -119,12 +130,13 @@ console.log(segments.map((s) => `${fmt(s.at)}  ${s.type === "card" ? s.name : `c
 run("ffmpeg", ["-v", "error", "-y", ...inputs, "-filter_complex", graph.join(";\n"), "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", ...encode, "-pix_fmt", "yuv420p", "-r", String(fps), "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out], { cwd: work });
 if (!args.draft) run("node", [`${root}scripts/loudnorm.mjs`, out, out.replace(/\.mp4$/, ".final.mp4"), "--lufs=-16"], { stdio: "inherit" });
 console.log(`${out.slice(root.length)}: ${total.toFixed(2)} s, ${cues.length} captions → renders/${id}.srt`);
+console.log(`chapters → renders/${id}.chapters.txt${chapters.problem ? ` (leave them out of the YouTube description: ${chapters.problem})` : ""}`);
 
 function checkFont({ font, fontsDir }) {
   const path = `${root}${fontsDir}`;
   const files = existsSync(path) ? readdirSync(path).filter((f) => /\.(ttf|otf|ttc)$/i.test(f)) : [];
   const families = files.flatMap((f) => run("fc-scan", ["--format", "%{family}\n", `${path}/${f}`]).stdout.split(/[\n,]/)).map((s) => s.trim());
-  if (!families.includes(font)) fail(`caption font "${font}" not found in ${fontsDir}/ (found: ${[...new Set(families)].join(", ") || "none"}). Copy a bold CJK sans there (see references/recorded.md), or set project.captions.font / fontsDir.`);
+  if (!families.includes(font)) fail(`caption font "${font}" not found in ${fontsDir}/ (found: ${[...new Set(families)].join(", ") || "none"}). Pin it in style.json and ${FETCH_HINT}, or set project.captions.font / fontsDir.`);
 }
 
 function ass(list, { width, height }) {
