@@ -170,7 +170,7 @@ For correction or resume, pass pointers to the plan, work package, previous resu
 
 When the caller provides Result artifact, the child must persist the detailed result before returning:
 
-1. Write the detailed result to that exact path with `audit-persistence` `write --exclusive` (or equivalent exclusive create). Confirm the write succeeded.
+1. Write the detailed result to that exact path using exclusive create; never overwrite an existing artifact. Confirm the write succeeded.
 2. Return only this compact receipt:
 
 ```text

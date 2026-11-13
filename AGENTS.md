@@ -9,9 +9,7 @@ material nearby in `references/`, `agents/`, `assets/`, or
 contains reusable design references plus executable helpers in `agents/`.
 Its shared Node tests are in `skills/baoyu-design/agents/tests/`; generator
 packages have their own sources under `agents/gen-pptx/src/` and
-`agents/gen-video/src/`. Shared workflow infrastructure may also expose small
-executable helpers inside its own skill, such as
-`skills/audit-persistence/agents/persist.mjs`.
+`agents/gen-video/src/`.
 
 ## Development & Verification Commands
 
@@ -19,9 +17,6 @@ There is no repository-wide build command. Run focused checks for the files you
 change:
 
 ```bash
-# Audit persistence helper
-node --test 'skills/audit-persistence/agents/tests/*.test.mjs'
-
 # Shared baoyu-design agent tests, from the repository root
 node --test 'skills/baoyu-design/agents/tests/*.test.mjs'
 
@@ -44,7 +39,7 @@ requires checked-in artifacts.
 ## Writing, Coding & Naming Conventions
 
 Write `SKILL.md` files as concise, actionable Markdown. Use lowercase,
-hyphenated skill directory names (for example, `review-plan-conformance`) and
+hyphenated skill directory names (for example, `delegate-work`) and
 descriptive, lowercase filenames for references. Preserve the language already
 used by the edited document; the root README is Chinese.
 
@@ -63,8 +58,8 @@ current workflow.
 
 ## Commit & Pull Request Guidelines
 
-Recent history uses short, imperative summaries (for example, `Migrate agent
-definitions and add execute-plan skill`). Keep commits narrowly scoped and avoid
+Use short, imperative summaries (for example, `Update delegation adapters`).
+Keep commits narrowly scoped and avoid
 unrelated formatting changes. Pull requests should explain the user-facing
 workflow change, list affected skills or packages, link related issues when
 available, and report the verification commands run. Include screenshots only
