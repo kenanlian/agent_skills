@@ -6,7 +6,7 @@ Use the built-in `generalPurpose` subagent with the complete task contract in it
 
 | Route | Model |
 | --- | --- |
-| `explorer` | `composer-2.5` |
+| `explorer` | `cursor-grok-4.7-high` |
 | `junior` worker | `cursor-grok-4.7-high` |
 | `senior` worker | `cursor-grok-4.7-high` |
 | `expert` worker | `cursor-grok-4.7-high` |
