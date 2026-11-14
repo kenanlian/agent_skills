@@ -6,10 +6,10 @@ Use the built-in `generalPurpose` subagent with the complete task contract in it
 
 | Route | Model |
 | --- | --- |
-| `explorer` | `cursor-grok-4.7-high` |
-| `junior` worker | `cursor-grok-4.7-high` |
-| `senior` worker | `cursor-grok-4.7-high` |
-| `expert` worker | `cursor-grok-4.7-high` |
+| `explorer` | `grok-4.7-high` |
+| `junior` worker | `grok-4.7-high` |
+| `senior` worker | `grok-4.7-high` |
+| `expert` worker | `claude-opus-5-5-high` |
 
 Multiple worker tiers may map to the same model; keep the semantic tier in the contract. If a mapped model is unavailable, retain the route and disclose the host-selected fallback.
 
