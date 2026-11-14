@@ -1,237 +1,100 @@
 ---
 name: delegate-work
-description: Delegate bounded exploration, implementation, design, analysis, or research to an isolated subagent using a self-resolving task contract and host-specific capability routing. Use when work should run in a separate context, serially through a specialist, or in parallel.
+description: Delegate bounded exploration, implementation, design, analysis, or research to an isolated subagent. Use for independently verifiable work that benefits from a separate context or parallel execution.
 ---
 
 # Delegate work
 
-The parent agent is the control plane: it owns decomposition, shared contracts, cross-task decisions, integration, verification, and the final answer. Subagents perform bounded evidence collection or worker tasks; serial work may still be delegated when inputs are stable and results are independently verifiable.
+The parent owns task decomposition, shared decisions, integration, verification, and the final answer. Subagents own bounded assignments; delegation can be serial or parallel.
 
-Use one platform-neutral delegation model. Role separates evidence exploration from tiered worker reasoning. Work type defines the task contract; capability tier applies only to workers; the host adapter translates the semantic route into platform-specific subagent/model selection.
+## Choose a bounded assignment
 
-## Require a bounded task
+Delegate work with a concrete goal, sufficient inputs, explicit scope, and a verification method. Resolve shared interface decisions before dispatch. Split assignments that mix unrelated goals.
 
-Delegate only when the assignment has:
+For write tasks, assign explicit file or directory ownership. Run tasks concurrently only when their writes do not overlap and their inputs are stable. A task that depends on another task's output waits until that output is verified.
 
-- one concrete goal whose success is decidable;
-- explicit included and excluded scope;
-- stable inputs and no unresolved cross-task interface decision;
-- an ownership boundary that prevents concurrent write conflicts;
-- a focused verification method or concrete evidence standard; and
-- a result that can return as a compact conclusion rather than raw working notes.
+## Select the route
 
-If the assignment needs unrelated subsystems, changes a shared contract while consumers are unsettled, or requires a long narrative to explain completion state, split or resolve it before dispatch. Parallelism is optional; boundedness is mandatory.
+| Role | Use | Capability tier | Access |
+| --- | --- | --- | --- |
+| `explorer` | Repository evidence: locate, trace, map, enumerate, and cross-check facts | `None` | `read-only` |
+| `worker` | Implementation, research, design, planning, or analysis requiring judgment | `junior`, `senior`, or `expert` | `read-only` or `write` |
 
-## Classify the delegation
+Explorers may search broadly but do not own root-cause diagnosis, design choices, correctness judgments, or review verdicts. Use a worker when the assignment requires those judgments; the parent retains final acceptance.
 
-Classify every delegation along four dimensions.
+Worker tiers describe reasoning needs:
 
-### Role
+- `junior`: straightforward, low-risk work with settled interfaces.
+- `senior`: default for normal engineering work with moderate context or cross-file reasoning.
+- `expert`: complex, ambiguous, architecture-sensitive, or high-risk work.
 
-- `explorer`: bounded repository evidence discovery. Locates, traces, maps, enumerates, and cross-checks facts. Owns evidence, not engineering judgment.
-- `worker`: bounded research, implementation, design, planning, or analysis requiring task-local engineering judgment.
+Read-only access or a small file count does not imply a lower tier. Access follows the deliverable; write access remains limited to assigned ownership.
 
-Use `explorer` for repository evidence questions. Search breadth may be exhaustive; breadth does not turn exploration into worker reasoning. Explorers must not own root-cause diagnosis, architecture/design choices, correctness judgments, risk decisions, or review verdicts.
-
-Evidence scouts requested by planning, execution, or an outer review workflow are explorers when their deliverable is repository facts. The calling parent retains every judgment based on that evidence.
-
-### Capability tier
-
-Capability tier applies only to `worker`. `explorer` uses `None`.
-
-- `junior`: straightforward, well-scoped, low-risk work with frozen interfaces and limited reasoning.
-- `senior`: default normal software-engineering work requiring moderate context or cross-file reasoning.
-- `expert`: complex, ambiguous, cross-subsystem, architecture-sensitive, lifecycle/integration-heavy, or high-risk work requiring deep reasoning.
-
-Default a worker to `senior`. Tier reflects reasoning requirement, not read/write access or file count.
-
-### Access
-
-Use these stable access values:
-
-- `explorer`: `read-only`.
-- `worker`: `read-only` or `write` according to requested deliverable.
-
-For writable workers, modifications remain limited to explicit write ownership. Access follows the deliverable and never selects worker tier.
-
-### Work type
-
-Use one of `exploration`, `research`, `implementation`, `design`, `planning`, or `analysis`.
-
-`exploration` pairs with `explorer`; other work types pair with `worker`. A task whose deliverable is code/file changes is `implementation` even when it starts with inspection. Root-cause, correctness, or redesign questions are `analysis` or `design`, not exploration. Final artifact review is owned by the outer review control plane, not modeled as a `delegate-work` role.
+Set work type to `exploration` for explorers, or `research`, `implementation`, `design`, `planning`, or `analysis` for workers. Code/file changes are `implementation` even when the work starts with inspection.
 
 ## Load the host adapter
 
-Load exactly one active-platform reference:
+Read only the active host's reference for model/subagent routing, isolation, invocation, and continuation:
 
-- Codex: `references/codex.md`
-- Cursor: `references/cursor.md`
-- OpenCode: `references/opencode.md`
-- Pi: `references/pi.md`
+- [Codex](references/codex.md)
+- [Cursor](references/cursor.md)
+- [OpenCode](references/opencode.md)
+- [Pi](references/pi.md)
 
-The host reference owns concrete model mapping, invocation mechanics, platform-specific isolation, waiting/timeout behavior, and resume mechanics. Do not duplicate those details in plans or caller skills.
+For an unsupported host, use available native delegation tools while preserving isolation, task boundaries, and access constraints. If those cannot be maintained, perform the work in the parent or report the limitation.
 
-If the host is not covered, preserve the common semantic classification and task contract using host-native behavior that maintains isolation, bounded scope, access semantics, and same-subagent correction.
+## Provide the task contract
 
-## Build the task contract
+Give the child enough context to work independently. Use exact paths and relevant identifiers for existing artifacts; inline only instructions and facts that are not already available there. Do not pass the parent conversation, duplicated skill text, or raw discovery logs.
 
-Delegated tasks must be self-resolving. When required context already exists in a stable repository artifact, pass its exact path and stable identifier instead of reproducing the artifact contents. Include all sections below; use `None` when empty.
+Use this compact structure, omitting optional sections that do not apply:
 
 ```markdown
-## Delegation
-
-Role: `<explorer | worker>`
-Capability tier: `<None for explorer | junior | senior | expert for worker>`
-Access: `<read-only | write for worker>`
-Work type: `<exploration | research | implementation | design | planning | analysis>`
-
-## Required skill
-
-Required skill: `<skill-name or None>`
-
-If a skill is named, load and follow it before starting.
-
-Required references:
-- `<reference paths, or None>`
+## Route
+Role: <explorer | worker>
+Capability tier: <None | junior | senior | expert>
+Access: <read-only | write>
+Work type: <exploration | research | implementation | design | planning | analysis>
 
 ## Task
-
-<State the concrete work. Do not paste artifact contents that Context sources already identify.>
-
-## Goal
-
-<State the observable result or exact question.>
-
-## Scope
-
-Repository:
-- `<workspace or repository>`
-
-Included:
-- `<files, modules, symbols, behaviors, plan sections, or diff range>`
-
-Excluded:
-- `<areas and changes outside the assignment>`
-
-Write ownership:
-- `<worker-owned paths; exact Result Artifact when provided; or read-only>`
-
-## Context sources
-
-Plan:
-- File: `<path or None>`
-- Work package: `<WP-* or None>`
-- Relevant contracts: `<C* ids, or None>`
-
-Dependency artifacts:
-- `<predecessor id>: <exact path>`
-- or None
-
-Result artifact:
-- `<exact path or None>`
+Goal: <observable result or exact question>
+Repository/workspace: <path>
+Scope: <included work and explicit exclusions>
+Write ownership: <allowed paths or read-only>
+Constraints: <interfaces to preserve and decisions reserved for the parent>
 
 ## Context
+<relevant paths, symbols, dependency outputs, and essential task-local facts>
 
-Shared contracts:
-- `<contract IDs to preserve; resolve prose from the plan when a plan file is given>`
-
-Task-local context:
-- `<only facts that do not already exist in a stable artifact>`
-
-Authority boundaries:
-- `<decisions the subagent may and may not make>`
-
-## Requirements
-
-- `<task-specific constraints>`
+## Required skill (optional)
+<available skill and reference paths to load before starting>
 
 ## Verification
-
-- `<focused commands, expected observations, evidence standard, or required artifact existence>`
+<focused commands, expected behavior, or evidence standard>
 
 ## Return
-
-When Result artifact is None, return all of the following:
-1. Outcome: whether the Goal was achieved.
-2. Work performed: bounded investigation, implementation, or analysis completed.
-3. Evidence: relevant files, symbols, changed files, or observed behavior.
-4. Verification: commands/checks and observed results.
-5. Contract deviations: any scope, interface, behavior, or access difference.
-6. Remaining issues: blockers, unresolved questions, or evidence limitations.
-
-Do not return raw exploration notes, full logs, or large source excerpts unless explicitly requested. Mark material claims as `confirmed`, `inferred`, or `unverified`.
+<outcome, evidence or changed files, verification results, and remaining issues>
 ```
 
-The child must resolve Context sources itself: read the plan file, locate the named `WP-*` heading, read caller-named `C*` from that plan, and read dependency artifacts. Pointer resolution is fail-closed. If a required plan file, work-package heading, contract ID, or dependency artifact is missing or ambiguous, return a blocker; do not guess and do not ask the parent to paste the artifact body.
+Name a domain skill only when it is available and relevant. The parent reads guidance needed to define the assignment; the child independently loads the named skill and references.
 
-Inline only current control instructions: concrete goal, included/excluded scope, access, write ownership, authority boundary, special requirements for this dispatch, and the exact failure being corrected. Do not copy work-package prose, contract prose, predecessor reports, or skill text the child can load.
+The child must read required context sources. If a required source is missing or ambiguous, report the blocker instead of inventing its contents. When instructions conflict with repository facts, surface the conflict before making affected changes. Necessary changes outside ownership also return to the parent for resolution.
 
-For correction or resume, pass pointers to the plan, work package, previous result artifact, the concrete failure, and any new result artifact path. Do not re-copy the work package.
+## Collect and verify
 
-When the caller provides Result artifact, the child must persist the detailed result before returning:
+Keep results compact: state whether the goal was achieved, what was found or changed, verification performed and its results, deviations, and blockers. Distinguish confirmed evidence from inference or unverified claims.
 
-1. Write the detailed result to that exact path using exclusive create; never overwrite an existing artifact. Confirm the write succeeded.
-2. Return only this compact receipt:
+Include evidence appropriate to the work:
 
-```text
-Outcome: <completed | blocked>
-Package: <WP-* or None>
-Attempt: <N or None>
-Artifact: <exact path>
-Changed:
-- <compact changed-file list>
-Verification:
-- <check-id>: <PASS | FAIL>
-Handoff: <one line or None>
-Deviations: <one line or None>
-Blockers: <one line or None>
-Evidence limitations: <one line or None>
-```
+- **Exploration:** exact paths/symbols, relevant relationships, search coverage, and limitations. For negative claims, state which names or patterns were searched.
+- **Research:** sources, applicable versions, and limitations; distinguish external findings from repository facts.
+- **Implementation:** changed files, delivered behavior, and focused checks. The same worker owns implementation and relevant tests.
+- **Design/planning/analysis:** recommendation or judgment, supporting evidence, and unresolved decisions.
 
-3. Do not explain the full implementation, repeat the artifact, return stdout, large code, or exploration notes in the receipt.
+Return results directly unless the assignment includes a report file. File output requires a write-enabled worker and the exact output path in its ownership; return a compact summary with the path and report any failed write. Avoid transcripts, private reasoning, and full console logs.
 
-If the artifact cannot be written, return only:
+Before accepting results or releasing dependent work, inspect relevant edits and evidence and run appropriate checks. Independently verify consequential claims about interfaces, data/security boundaries, missing behavior, and integration.
 
-```text
-Outcome: persistence-failure
-Package: <WP-* or None>
-Artifact: <path>
-Reason: <concise reason>
-```
+If verification fails or the child violates the contract, resume the same child with the failed requirement, concrete evidence, and correction. Pass existing context by reference rather than repeating it. If that child cannot be resumed, disclose the limitation before choosing a fallback.
 
-Do not send the full report so the parent can persist it.
-
-The artifact may be more detailed than the receipt but must not be a transcript. Omit private reasoning, chain-of-thought, raw exploration notes, unrelated excerpts, full console logs, and copies of the work package or plan contracts. Keep only execution evidence later Main, successors, audit, or resume may need.
-
-Write ownership must list the exact Result Artifact path. Do not grant a `.dev/execution/**` wildcard.
-
-When Result artifact is omitted, keep the standalone Return protocol above. Do not create an artifact for ordinary exploration, research, or analysis.
-
-Use `Required skill: None` when no applicable domain skill exists. When a skill is required, the parent reads the skill/references needed to define scope, safety, shared contracts, or verification before dispatch; the subagent independently loads them.
-
-The task contract authority order is: task-specific requirements, referenced plan work package/shared contracts, then repository reality. Resolve conflicts before dispatch.
-
-Self-resolving does not mean exhaustive. Pass pointers to relevant shared contracts, the current work package, direct dependency artifacts, and the exact Result Artifact when one is required. Do not pass parent conversation, unrelated plan sections, other work packages' implementation details, duplicated skill text, or raw discovery logs.
-
-## Adapt to work type
-
-Retain common Return fields, then add only work-type-specific evidence:
-
-- **Exploration:** exact paths/symbols, flow/relationship, search coverage, and evidence limitations. Negative claims state aliases/string forms searched. No diagnosis/design/verdict.
-- **Research:** sources/versions, evidence, limitations; separate external from repository facts.
-- **Implementation:** files changed, behavior delivered, tests added/updated, focused commands/results, and needed-but-unperformed scope expansion. Same worker owns local implementation and focused tests. When Result artifact is provided, put that detail in the artifact and return only the compact receipt.
-- **Design/planning/analysis:** direct recommendation/judgment, evidence, and unresolved decisions.
-
-If an explorer discovers the real question requires diagnosis/design/judgment, return gathered evidence plus that boundary. The parent may dispatch a worker with appropriate tier.
-
-## Dispatch and collect
-
-1. Classify role, tier, access, and work type. Enforce `explorer → None + read-only + exploration`; `worker → junior|senior|expert` with read-only/write as required.
-2. Load the active host adapter and apply it. Put a self-resolving task contract in the dispatch: inline control plus exact pointers to stable artifacts.
-3. Dispatch ready work concurrently only when dependency outputs are stable, write ownership does not overlap, and no shared interface remains unsettled.
-4. Wait for every result in the current wave and verify task contract, actual edits/artifacts, and focused checks before releasing dependent work.
-5. Reject scope/access violations. A subagent that discovers a necessary out-of-scope edit returns it as a blocker instead of making it.
-6. If a response violates contract or verification finds an error, resume the same subagent with failed requirement, concrete evidence, and exact correction. Do not silently spawn a replacement.
-7. Do not wait indefinitely on a stalled subagent. Apply host waiting rules. For optional scouting/critique, verify directly and disclose limitation; for a required deliverable, complete under parent when safe or report the blocker.
-8. If the original subagent is no longer resumable, report that limitation rather than silently replacing it.
-9. Keep the parent grounded in load-bearing repository facts. Compact summaries reduce context but do not replace independent verification of public interfaces, data/security boundaries, negative claims, integration behavior, or final acceptance.
+Follow host waiting rules and avoid indefinite waits. For stalled work, inspect status and either complete the assignment in the parent when safe or report the blocker. Disclose any optional investigation left incomplete.

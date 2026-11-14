@@ -22,7 +22,7 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 ## 委派模型
 
-`delegate-work` 只描述普通工作委派，不承担最终审查流程：
+`delegate-work` 将有明确目标、范围和验证方式的任务交给隔离上下文中的 subagent，支持串行和并行执行：
 
 - `role`: `explorer | worker`
 - `tier`: `junior | senior | expert`，只适用于 worker；explorer 使用 `None`
@@ -31,9 +31,9 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 Explorer 专门负责代码库事实发现：定位、追踪、映射、穷举和交叉验证文件、symbol、caller、consumer、route、test、registration、state/data flow 等证据。搜索范围可以很广甚至 exhaustive，但 explorer 不负责 root-cause、架构/设计选择、正确性判断或 review verdict。需要工程判断时使用相应 tier 的 worker。
 
-最终审查不表示成 `delegate-work` 的 `reviewer` role，由调用方自行组织。顶层只读审查 Agent 仍可通过 `delegate-work` 委派 bounded explorer 收集证据，但 finding、severity、contract status 和 verdict 始终由该顶层审查 Agent 判断。
+父 Agent 提供简洁的任务契约，明确目标、范围、写入归属、上下文来源和验证方式；仅在适用时指定领域 Skill。已有文件用路径和必要标识引用，无需专用计划格式或执行报告协议。subagent 直接返回结论、证据和验证结果，仅在调用方要求时保存报告文件。
 
-父 Agent 必须明确指定 subagent 要加载的领域 Skill（无适用 Skill 时写 `None`），并提供 self-resolving 任务契约：稳定 artifact 用路径和 ID 引用，当前控制指令才 inline。subagent 在隔离上下文中自己解析 pointer；若返回内容不符合契约或复核有误，父 Agent 必须优先恢复同一个 subagent 修正，不得静默新建替代 subagent。
+父 Agent 负责共享决策、结果整合、复核和最终验收。并行任务的写入范围不能重叠，依赖输出须先验证；若结果不符合契约或验证失败，优先续接同一个 subagent 修正，无法续接时说明限制。
 
 ### OpenCode adapter
 
