@@ -7,9 +7,9 @@ Use `spawn_agent` with `fork_turns: "none"` and the complete task contract. Sele
 | Route | Model | Reasoning effort | `timeout_ms` heartbeat |
 | --- | --- | --- | --- |
 | `explorer` | `gpt-6-luna` | `high` | `360000` (6 min) |
-| `junior` worker | `gpt-6.1-sol` | `medium` | `360000` (6 min) |
-| `senior` worker | `gpt-6.1-sol` | `high` | `480000` (8 min) |
-| `expert` worker | `gpt-6.1-sol` | `xhigh` | `720000` (12 min) |
+| `junior` worker | `gpt-6.2-sol` | `medium` | `360000` (6 min) |
+| `senior` worker | `gpt-6.2-sol` | `high` | `480000` (8 min) |
+| `expert` worker | `gpt-6.2-sol` | `xhigh` | `720000` (12 min) |
 
 Keep explorers at `high` for broad repository tracing. Use the worker model and reasoning effort specified for each tier above.
 
