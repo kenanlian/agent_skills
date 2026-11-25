@@ -2,7 +2,7 @@
 
 ## Tool and routing
 
-Use `delegate_agent` with the complete task contract in `prompt` and the contract's `read-only` or `write` value for access.
+Use `delegate_agent` with the brief in `prompt`. Set access to `read-only` unless the brief assigns specific paths to write; in that case use `write`.
 
 | Route | `agent` |
 | --- | --- |

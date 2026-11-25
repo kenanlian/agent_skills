@@ -22,18 +22,12 @@ Codex 使用 `.agents/skills` 作为项目级 Skill 发现目录；同一个链�
 
 ## 委派模型
 
-`delegate-work` 将有明确目标、范围和验证方式的任务交给隔离上下文中的 subagent，支持串行和并行执行：
+默认由主 Agent 自己完成。只有当独立任务可以并行推进、长调查只需带回结论和证据，或重要判断需要第二意见时，才使用 `delegate-work`。
 
-- `role`: `explorer | worker`
-- `tier`: `junior | senior | expert`，只适用于 worker；explorer 使用 `None`
-- `access`: explorer 固定 `read-only`；worker 为 `read-only | write`
-- `work type`: exploration、research、implementation、design、planning 或 analysis
+- `explorer` 只读、无档位：负责找调用点、追踪数据流等事实调查，不做根因判断或审查裁决。
+- `worker` 负责实现或判断，默认 `senior`。做法已定且风险低时用 `junior`；判断困难或出错代价高时用 `expert`，即使任务只读。
 
-Explorer 专门负责代码库事实发现：定位、追踪、映射、穷举和交叉验证文件、symbol、caller、consumer、route、test、registration、state/data flow 等证据。搜索范围可以很广甚至 exhaustive，但 explorer 不负责 root-cause、架构/设计选择、正确性判断或 review verdict。需要工程判断时使用相应 tier 的 worker。
-
-父 Agent 提供简洁的任务契约，明确目标、范围、写入归属、上下文来源和验证方式；仅在适用时指定领域 Skill。已有文件用路径和必要标识引用，无需专用计划格式或执行报告协议。subagent 直接返回结论、证据和验证结果，仅在调用方要求时保存报告文件。
-
-父 Agent 负责共享决策、结果整合、复核和最终验收。并行任务的写入范围不能重叠，依赖输出须先验证；若结果不符合契约或验证失败，优先续接同一个 subagent 修正，无法续接时说明限制。
+委派时说清目标、边界和验收方式即可，不必填写工作类型。只有写任务才指定可修改的路径。主 Agent 负责共享决策、集成和最终验收；并行任务不得交叉写入，下游依赖的结果须先验证。
 
 ### OpenCode adapter
 

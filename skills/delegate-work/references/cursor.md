@@ -11,7 +11,7 @@ Use the built-in `generalPurpose` subagent with the complete task contract in it
 | `senior` worker | `grok-4.7-high` |
 | `expert` worker | `claude-opus-5-5-high` |
 
-Multiple worker tiers may map to the same model; keep the semantic tier in the contract. If a mapped model is unavailable, retain the route and disclose the host-selected fallback.
+Multiple worker tiers may map to the same model; use the table for model selection without adding a tier field to the prompt. If a mapped model is unavailable, retain the route and disclose the host-selected fallback.
 
 ## Correction and resume
 
